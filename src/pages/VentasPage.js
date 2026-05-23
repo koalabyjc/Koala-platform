@@ -9,6 +9,7 @@ import { localDb } from '../utils/localDb.js';
 import { emailService } from '../utils/emailService.js';
 import { smsService } from '../utils/smsService.js';
 import { webhookService } from '../utils/webhookService.js';
+import { generateWhatsAppSummary, updateOrderFinancials } from '../utils/orderLogic.js';
 
 let ventasModalInitialized = false;
 
@@ -72,11 +73,15 @@ export function renderVentasPage() {
               <div class="form-group">
                 <label style="display:block; margin-bottom:8px; font-size:12px; font-weight:600;">Estado del Pedido</label>
                 <select id="edit-order-status" class="auth-input" style="width:100%">
-                  <option value="pending">Pendiente</option>
-                  <option value="processing">En Proceso</option>
-                  <option value="shipped">Enviado</option>
-                  <option value="delivered">Entregado</option>
-                  <option value="cancelled">Cancelado</option>
+                  <option value="pending">Pendiente depósito</option>
+                  <option value="partial">Pago parcial</option>
+                  <option value="processing">Orden procesada</option>
+                  <option value="transit">En tránsito</option>
+                  <option value="ready">Lista para entrega</option>
+                  <option value="balance">Balance pendiente</option>
+                  <option value="delivered">Completada</option>
+                  <option value="overdue">Vencida</option>
+                  <option value="cancelled">Cancelada</option>
                 </select>
               </div>
             </div>
@@ -123,10 +128,15 @@ export function renderVentasPage() {
             <!-- Order details injected here -->
           </div>
           <div class="modal__footer" style="justify-content: space-between;">
-            <button type="button" class="btn btn--outline" id="adjust-order-btn">
-              ${icon('edit-2', 16) || icon('edit', 16)} Ajustar Pedido
+            <button type="button" class="btn btn--outline" id="copy-whatsapp-btn" style="color: #25D366; border-color: #25D366;">
+              ${icon('message-circle', 16)} Resumen WhatsApp
             </button>
-            <button type="button" class="btn btn--primary" id="done-view-order-btn">Cerrar</button>
+            <div style="display: flex; gap: 8px;">
+              <button type="button" class="btn btn--outline" id="adjust-order-btn">
+                ${icon('edit-2', 16) || icon('edit', 16)} Ajustar
+              </button>
+              <button type="button" class="btn btn--primary" id="done-view-order-btn">Cerrar</button>
+            </div>
           </div>
         </div>
       </div>
@@ -419,26 +429,64 @@ export async function initVentasPage() {
             `;
           }).join('');
 
+          const whatsappText = generateWhatsAppSummary(order);
           document.getElementById('view-order-content').innerHTML = `
-            <div style="margin-bottom: 16px;">
-              <strong style="color:var(--color-text-secondary); font-size:12px;">CLIENTE</strong>
-              <div style="font-size:16px; font-weight:600;">${order.customer}</div>
+            <div style="text-align: center; margin-bottom: 24px;">
+               <h3 style="font-family: var(--font-display); font-size: 24px;">KOALA</h3>
+               <div style="font-size: 12px; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 2px;">Factura ${order.id}</div>
             </div>
-            <div style="margin-bottom: 16px;">
-              <strong style="color:var(--color-text-secondary); font-size:12px;">ID PEDIDO</strong>
-              <div>${order.id}</div>
-            </div>
-            <div style="margin-bottom: 24px;">
-              <strong style="color:var(--color-text-secondary); font-size:12px;">ARTÍCULOS</strong>
-              <div style="margin-top: 8px;">
-                ${itemsHtml}
+            <div style="display: flex; justify-content: space-between; margin-bottom: 16px; font-size: 14px;">
+              <div>
+                <strong style="color:var(--color-text-secondary); font-size:11px; display:block;">CLIENTE</strong>
+                <div style="font-weight:600;">${order.customer}</div>
+                ${order.customerPhone ? `<div style="font-size:12px; color:var(--color-text-secondary);">${order.customerPhone}</div>` : ''}
               </div>
-              <div style="display:flex; justify-content:space-between; margin-top:16px; font-weight:700; font-size:18px;">
-                <span>Total</span>
+              <div style="text-align: right;">
+                <strong style="color:var(--color-text-secondary); font-size:11px; display:block;">FECHA LÍMITE</strong>
+                <div style="font-weight:600; color:var(--color-error);">${order.dueDate ? new Date(order.dueDate).toLocaleDateString('es-ES', {month:'short', day:'numeric', year:'numeric'}) : 'N/A'}</div>
+              </div>
+            </div>
+            
+            <div style="margin-bottom: 24px;">
+              <strong style="color:var(--color-text-secondary); font-size:11px; display:block; margin-bottom: 8px;">ARTÍCULOS</strong>
+              <div>${itemsHtml}</div>
+            </div>
+            
+            <div style="background: var(--color-bg-surface); padding: 16px; border-radius: 8px;">
+              <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:14px;">
+                <span>Subtotal</span>
                 <span>${formatCurrency(order.total)}</span>
               </div>
+              <div style="display:flex; justify-content:space-between; margin-bottom:12px; font-size:14px;">
+                <span>Envío</span>
+                <span>${formatCurrency(order.shippingCost || 0)}</span>
+              </div>
+              <div style="display:flex; justify-content:space-between; font-weight:700; font-size:16px; margin-bottom: 8px;">
+                <span>Total Estimado</span>
+                <span>${formatCurrency((order.total || 0) + (order.shippingCost || 0))}</span>
+              </div>
+              <div style="border-top: 1px dashed var(--color-neutral-divider); margin: 12px 0;"></div>
+              <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:14px; color: var(--color-success);">
+                <span>Pagado</span>
+                <span>- ${formatCurrency(order.totalPaid || 0)}</span>
+              </div>
+              <div style="display:flex; justify-content:space-between; font-weight:700; font-size:18px; color: ${(order.pendingBalance !== undefined ? order.pendingBalance : order.total) > 0 ? 'var(--color-error)' : 'var(--color-text-main)'};">
+                <span>Balance Pendiente</span>
+                <span>${formatCurrency(order.pendingBalance !== undefined ? order.pendingBalance : order.total)}</span>
+              </div>
+            </div>
+            <div style="text-align: center; margin-top: 24px; font-size: 11px; color: var(--color-text-muted);">
+              Pedido trabajado por encargo.<br/>koalabyjc@gmail.com
             </div>
           `;
+          
+          const copyBtn = document.getElementById('copy-whatsapp-btn');
+          copyBtn.onclick = () => {
+             navigator.clipboard.writeText(whatsappText);
+             const originalHtml = copyBtn.innerHTML;
+             copyBtn.innerHTML = `${icon('check', 16)} Copiado`;
+             setTimeout(() => { copyBtn.innerHTML = originalHtml; }, 2000);
+          };
           
           viewModal.classList.add('active');
         }
@@ -483,16 +531,26 @@ function renderOrderItem(order) {
       <!-- Status -->
       <div style="min-width: 130px;">
         <select class="status-badge status-badge--${order.status} inline-status-select" data-id="${order.id}" style="border:none; cursor:pointer; font-weight:bold; font-size:11px; padding-right:24px; outline:none; appearance:none; background-image:url('data:image/svg+xml;utf8,<svg fill=%22none%22 stroke=%22currentColor%22 stroke-width=%222%22 viewBox=%220 0 24 24%22 xmlns=%22http://www.w3.org/2000/svg%22><path stroke-linecap=%22round%22 stroke-linejoin=%22round%22 d=%22M19 9l-7 7-7-7%22></path></svg>'); background-repeat:no-repeat; background-position:right 6px center; background-size:12px;">
-          <option value="pending" ${order.status === 'pending' ? 'selected' : ''}>Pendiente</option>
-          <option value="processing" ${order.status === 'processing' ? 'selected' : ''}>En Proceso</option>
-          <option value="shipped" ${order.status === 'shipped' ? 'selected' : ''}>Enviado</option>
-          <option value="delivered" ${order.status === 'delivered' ? 'selected' : ''}>Entregado</option>
-          <option value="cancelled" ${order.status === 'cancelled' ? 'selected' : ''}>Cancelado</option>
+          <option value="pending" ${order.status === 'pending' ? 'selected' : ''}>Pendiente dep.</option>
+          <option value="partial" ${order.status === 'partial' ? 'selected' : ''}>Pago parcial</option>
+          <option value="processing" ${order.status === 'processing' ? 'selected' : ''}>Procesada</option>
+          <option value="transit" ${order.status === 'transit' ? 'selected' : ''}>En tránsito</option>
+          <option value="ready" ${order.status === 'ready' ? 'selected' : ''}>Lista entrega</option>
+          <option value="balance" ${order.status === 'balance' ? 'selected' : ''}>Balance pend.</option>
+          <option value="delivered" ${order.status === 'delivered' ? 'selected' : ''}>Completada</option>
+          <option value="overdue" ${order.status === 'overdue' ? 'selected' : ''}>Vencida</option>
+          <option value="cancelled" ${order.status === 'cancelled' ? 'selected' : ''}>Cancelada</option>
         </select>
       </div>
       
-      <!-- Total -->
-      <div class="order-item__total" style="min-width: 80px; font-weight:600;">${formatCurrency(order.total)}</div>
+      <!-- Total & Balance -->
+      <div class="order-item__total" style="min-width: 120px;">
+        <div style="font-weight:600; font-size: 14px;">T: ${formatCurrency((order.total || 0) + (order.shippingCost || 0))}</div>
+        <div style="font-size: 11px; color: ${(order.pendingBalance !== undefined ? order.pendingBalance : order.total) > 0 ? 'var(--color-error)' : 'var(--color-success)'}; font-weight: 600;">
+          P: ${formatCurrency(order.pendingBalance !== undefined ? order.pendingBalance : order.total)}
+        </div>
+        ${order.dueDate ? `<div style="font-size: 10px; color: var(--color-text-muted);">Vence: ${new Date(order.dueDate).toLocaleDateString('es-ES', {month:'short', day:'numeric'})}</div>` : ''}
+      </div>
 
       <!-- Action Menu -->
       <div class="action-menu" style="margin-left:auto;">

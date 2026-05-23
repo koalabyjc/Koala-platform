@@ -28,6 +28,44 @@ export function renderHomePage() {
         </div>
       </section>
 
+      <!-- Cómo Funciona KOALA -->
+      <section class="store-section" style="padding-top: 60px; padding-bottom: 20px;">
+        <h2 style="font-family: var(--font-display); font-size: 24px; text-align: center; margin-bottom: 40px;">Cómo funciona KOALA</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px;">
+          
+          <div style="background: var(--color-bg-surface); padding: 24px 16px; border-radius: var(--radius-lg); text-align: center; border: 1px solid var(--color-neutral-border);">
+            <div style="color: var(--color-primary); margin-bottom: 16px;">${icon('package', 32)}</div>
+            <h3 style="font-size: 16px; margin-bottom: 8px;">1. Pedido por encargo</h3>
+            <p style="font-size: 13px; color: var(--color-text-secondary); line-height: 1.5;">Todos los productos se trabajan por pedido personalizado.</p>
+          </div>
+
+          <div style="background: var(--color-bg-surface); padding: 24px 16px; border-radius: var(--radius-lg); text-align: center; border: 1px solid var(--color-neutral-border);">
+            <div style="color: var(--color-primary); margin-bottom: 16px;">${icon('clock', 32)}</div>
+            <h3 style="font-size: 16px; margin-bottom: 8px;">2. Tiempo de entrega</h3>
+            <p style="font-size: 13px; color: var(--color-text-secondary); line-height: 1.5;">Las órdenes pueden tardar aprox. 1–2 semanas dependiendo disponibilidad.</p>
+          </div>
+
+          <div style="background: var(--color-bg-surface); padding: 24px 16px; border-radius: var(--radius-lg); text-align: center; border: 1px solid var(--color-neutral-border);">
+            <div style="color: var(--color-primary); margin-bottom: 16px;">${icon('credit-card', 32)}</div>
+            <h3 style="font-size: 16px; margin-bottom: 8px;">3. Pagos flexibles</h3>
+            <p style="font-size: 13px; color: var(--color-text-secondary); line-height: 1.5;">Puedes realizar pagos parciales dentro de la fecha límite asignada a tu orden.</p>
+          </div>
+
+          <div style="background: var(--color-bg-surface); padding: 24px 16px; border-radius: var(--radius-lg); text-align: center; border: 1px solid var(--color-neutral-border);">
+            <div style="color: var(--color-primary); margin-bottom: 16px;">${icon('calendar', 32)}</div>
+            <h3 style="font-size: 16px; margin-bottom: 8px;">4. Balance pendiente</h3>
+            <p style="font-size: 13px; color: var(--color-text-secondary); line-height: 1.5;">Las órdenes deben completarse antes de la fecha límite para evitar recargos.</p>
+          </div>
+
+          <div style="background: var(--color-bg-surface); padding: 24px 16px; border-radius: var(--radius-lg); text-align: center; border: 1px solid var(--color-neutral-border);">
+            <div style="color: var(--color-primary); margin-bottom: 16px;">${icon('message-circle', 32)}</div>
+            <h3 style="font-size: 16px; margin-bottom: 8px;">5. Actualizaciones</h3>
+            <p style="font-size: 13px; color: var(--color-text-secondary); line-height: 1.5;">Recibirás actualizaciones y resumen de tu orden directamente de KOALA.</p>
+          </div>
+
+        </div>
+      </section>
+
       <!-- Shop Navigation / Filters -->
       <section class="store-section" id="shop-section" style="padding-top: 40px; padding-bottom: 0;">
         <div style="display: flex; flex-direction: column; gap: 24px;">

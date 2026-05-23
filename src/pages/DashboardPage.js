@@ -21,14 +21,21 @@ export function renderDashboardPage() {
         <div class="kpi-card hover-lift">
           <div class="kpi-card__icon kpi-card__icon--primary">${icon('dollar-sign', 24)}</div>
           <div class="kpi-card__content">
-            <div class="kpi-card__label">Ingresos del Mes</div>
+            <div class="kpi-card__label">Total Ingresos (Mes)</div>
             <div class="kpi-card__value" id="kpi-revenue">$0.00</div>
+          </div>
+        </div>
+        <div class="kpi-card hover-lift" style="border-left: 3px solid var(--color-error);">
+          <div class="kpi-card__icon kpi-card__icon--primary" style="color: var(--color-error); background: rgba(239,68,68,0.1);">${icon('alert-circle', 24) || icon('clock', 24)}</div>
+          <div class="kpi-card__content">
+            <div class="kpi-card__label">Por Cobrar</div>
+            <div class="kpi-card__value" id="kpi-receivables">$0.00</div>
           </div>
         </div>
         <div class="kpi-card hover-lift">
           <div class="kpi-card__icon kpi-card__icon--success">${icon('shopping-bag', 24)}</div>
           <div class="kpi-card__content">
-            <div class="kpi-card__label">Pedidos del Mes</div>
+            <div class="kpi-card__label">Pedidos Activos</div>
             <div class="kpi-card__value" id="kpi-orders">0</div>
           </div>
         </div>
@@ -158,11 +165,15 @@ export async function initDashboard() {
     const clients = await localDb.getAllClients();
     
     // Valid orders
-    const validOrders = orders.filter(o => o.status !== 'cancelled');
-    const totalRevenue = validOrders.reduce((sum, o) => sum + o.total, 0);
+    const validOrders = orders.filter(o => o.status !== 'cancelled' && o.status !== 'delivered');
+    const totalRevenue = orders.filter(o => o.status !== 'cancelled').reduce((sum, o) => sum + (o.totalPaid || 0), 0);
+    const totalReceivables = validOrders.reduce((sum, o) => sum + (o.pendingBalance !== undefined ? o.pendingBalance : (o.total || 0)), 0);
 
     // Update KPIs
     document.getElementById('kpi-revenue').textContent = formatCurrency(totalRevenue);
+    if(document.getElementById('kpi-receivables')) {
+      document.getElementById('kpi-receivables').textContent = formatCurrency(totalReceivables);
+    }
     document.getElementById('kpi-orders').textContent = validOrders.length;
     document.getElementById('kpi-clients').textContent = clients.length;
 

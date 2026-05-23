@@ -93,14 +93,22 @@ export function renderClientesPage() {
                 <input type="text" id="client-city" class="auth-input" style="width:100%" placeholder="Ej. San Juan" />
               </div>
             </div>
-            <div class="form-group" style="margin-bottom: 24px;">
-              <label style="display:block; margin-bottom:8px; font-size:12px; font-weight:600;">Estado</label>
-              <select id="client-status" class="auth-input" style="width:100%">
-                <option value="new">Nuevo</option>
-                <option value="active">Activo</option>
-                <option value="vip">VIP</option>
-              </select>
-              <span style="font-size:10px; color:var(--color-text-muted); display:block; margin-top:4px;">*El sistema asigna automáticamente, pero puedes cambiarlo manualmente.</span>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
+              <div class="form-group">
+                <label style="display:block; margin-bottom:8px; font-size:12px; font-weight:600;">Estado</label>
+                <select id="client-status" class="auth-input" style="width:100%">
+                  <option value="new">Nuevo</option>
+                  <option value="active">Activo</option>
+                  <option value="vip">VIP</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label style="display:block; margin-bottom:8px; font-size:12px; font-weight:600;">Nivel de Confianza</label>
+                <select id="client-type" class="auth-input" style="width:100%">
+                  <option value="standard">Estándar (Req. Depósito)</option>
+                  <option value="trusted">Trusted (Flexible)</option>
+                </select>
+              </div>
             </div>
             <div class="modal__footer">
               <button type="button" class="btn btn--ghost" id="cancel-client-btn">Cancelar</button>
@@ -176,6 +184,7 @@ export async function initClientesPage() {
           document.getElementById('client-phone').value = '';
           document.getElementById('client-city').value = '';
           document.getElementById('client-status').value = 'new';
+          document.getElementById('client-type').value = 'standard';
           modal.classList.add('active');
         });
       }
@@ -196,6 +205,7 @@ export async function initClientesPage() {
           const phone = document.getElementById('client-phone').value;
           const city = document.getElementById('client-city').value;
           const status = document.getElementById('client-status').value;
+          const clientType = document.getElementById('client-type').value;
 
           let client;
           if (id) {
@@ -209,6 +219,7 @@ export async function initClientesPage() {
             client.phone = phone;
             client.city = city;
             client.status = status;
+            client.clientType = clientType;
           } else {
             // New Client
             client = {
@@ -218,6 +229,7 @@ export async function initClientesPage() {
               phone,
               city,
               status: 'new',
+              clientType: 'standard',
               spent: 0,
               ordersCount: 0,
               lastOrder: new Date().toISOString()
@@ -251,6 +263,7 @@ export async function initClientesPage() {
           document.getElementById('client-phone').value = client.phone || '';
           document.getElementById('client-city').value = client.city || '';
           document.getElementById('client-status').value = client.status || 'active';
+          document.getElementById('client-type').value = client.clientType || 'standard';
           modal.classList.add('active');
         }
       });
@@ -292,6 +305,10 @@ function renderClientCard(client) {
   const contactLine = contactParts.length > 0
     ? contactParts.join(' <span style="margin:0 6px; color:var(--color-neutral-divider);">|</span> ')
     : '';
+    
+  const typeBadge = client.clientType === 'trusted' 
+    ? `<span style="font-size:10px; background:rgba(37,211,102,0.1); color:#25D366; padding:2px 6px; border-radius:12px; margin-left:8px; font-weight:700;">TRUSTED</span>`
+    : '';
 
   return `
     <div class="client-card animate-fade-in-up">
@@ -299,7 +316,7 @@ function renderClientCard(client) {
       <div class="client-card__header">
         <div class="client-card__avatar ${avatarClass}">${initials}</div>
         <div class="client-card__info" style="flex:1;">
-          <h3 class="client-card__name">${client.name}</h3>
+          <h3 class="client-card__name" style="display:flex; align-items:center;">${client.name} ${typeBadge}</h3>
           <div class="client-card__email">
             ${client.email ? `${icon('mail', 12)} ${client.email}` : `${icon('users', 12)} Sin email`}
           </div>

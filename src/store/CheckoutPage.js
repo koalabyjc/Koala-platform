@@ -7,6 +7,7 @@ import { icon } from '../utils/icons.js';
 import { formatCurrency } from '../utils/formatters.js';
 import { cartService } from './cartService.js';
 import { localDb } from '../utils/localDb.js';
+import { calculateDueDate } from '../utils/orderLogic.js';
 
 export function renderCheckoutPage() {
   const items = cartService.getItems();
@@ -100,6 +101,11 @@ export function renderCheckoutPage() {
             <span>${formatCurrency(total)}</span>
           </div>
         </div>
+
+        <!-- Alerta de encargo -->
+        <div style="margin: 16px 0; padding: 12px; background: rgba(198, 162, 122, 0.1); border-left: 3px solid var(--color-primary); border-radius: 4px; font-size: 12px; color: var(--color-text-secondary); line-height: 1.4;">
+          <strong>Nota importante:</strong> Todos los pedidos son trabajados por encargo y pueden tardar 1–2 semanas en llegar.
+        </div>
         
         <button class="btn-checkout" id="btn-submit-order" onclick="window.processKoalaOrder()">
           Procesar Orden
@@ -154,17 +160,24 @@ window.processKoalaOrder = async () => {
       return;
     }
     
+    const orderDate = new Date().toISOString();
+    const total = cartService.getTotal();
+    
     const newOrder = {
       id: 'ORD-' + Math.floor(1000 + Math.random() * 9000),
       customer: name,
       customerPhone: phone,
       customerEmail: email,
       customerCity: city,
-      total: cartService.getTotal(),
-      status: 'pending',
-      date: new Date().toISOString(),
+      total: total,
+      status: 'pending', // o 'Pendiente depósito'
+      date: orderDate,
       paymentMethod: payment,
       items: cartService.getItemCount(),
+      dueDate: calculateDueDate(orderDate),
+      pendingBalance: total,
+      totalPaid: 0,
+      payments: [],
       itemsList: items.map(item => ({
          id: item.id,
          name: item.name,

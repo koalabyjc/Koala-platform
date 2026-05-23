@@ -74,20 +74,16 @@ class SupabaseDB {
           order.customerPhone = meta.phone;
           order.customerEmail = meta.email;
           order.customerCity = meta.city;
+          order.dueDate = meta.dueDate;
+          order.payments = meta.payments || [];
+          order.shippingCost = meta.shippingCost || 0;
+          order.totalPaid = meta.totalPaid || 0;
+          order.pendingBalance = meta.pendingBalance !== undefined ? meta.pendingBalance : order.total;
+          
           // Remove meta object so it doesn't render as a product in the UI
           order.itemslist.splice(metaIndex, 1);
         }
       }
-      
-      // Keep localStorage as fallback just in case
-      try {
-        const localMeta = JSON.parse(localStorage.getItem(`koala_order_meta_${order.id}`));
-        if (localMeta && !order.customerPhone) {
-          order.customerPhone = localMeta.phone;
-          order.customerEmail = localMeta.email;
-          order.customerCity = localMeta.city;
-        }
-      } catch (e) {}
       
       order.itemsList = order.itemslist; // standardize case
       return order;
@@ -100,14 +96,17 @@ class SupabaseDB {
     
     // Pack metadata into itemslist to bypass schema limitations safely into the cloud
     const finalItemsList = [...(order.itemsList || order.itemslist || [])];
-    if (order.customerPhone || order.customerEmail || order.customerCity) {
-      finalItemsList.push({
-        __koala_meta: true,
-        phone: order.customerPhone || '',
-        email: order.customerEmail || '',
-        city: order.customerCity || ''
-      });
-    }
+    finalItemsList.push({
+      __koala_meta: true,
+      phone: order.customerPhone || '',
+      email: order.customerEmail || '',
+      city: order.customerCity || '',
+      dueDate: order.dueDate || '',
+      payments: order.payments || [],
+      shippingCost: order.shippingCost || 0,
+      totalPaid: order.totalPaid || 0,
+      pendingBalance: order.pendingBalance !== undefined ? order.pendingBalance : order.total
+    });
     
     // Sanitize payload to match exact Supabase schema and prevent PGRST204 errors
     const payload = {
@@ -123,15 +122,6 @@ class SupabaseDB {
     
     const { data, error } = await supabase.from('orders').upsert(payload).select();
     if (error) throw error;
-    
-    // Polyfill: Save extra contact data locally since Supabase schema lacks these columns
-    if (order.customerPhone || order.customerEmail || order.customerCity) {
-      localStorage.setItem(`koala_order_meta_${order.id}`, JSON.stringify({
-        phone: order.customerPhone || '',
-        email: order.customerEmail || '',
-        city: order.customerCity || ''
-      }));
-    }
     
     if (!existing) {
       // Build a detailed notification with real order data
@@ -165,17 +155,23 @@ class SupabaseDB {
     const { data, error } = await query;
     if (error) return [];
     
-    // Polyfill missing 'city' column
+    // Polyfill missing 'city' and 'clientType' column parsing from status
     return (data || []).map(client => {
-      try {
-        const meta = JSON.parse(localStorage.getItem(`koala_client_meta_${client.id}`));
-        if (meta && meta.city) client.city = meta.city;
-      } catch (e) {}
+      if (client.status && client.status.includes('||')) {
+        const parts = client.status.split('||');
+        client.status = parts[0];
+        client.city = parts[1] || '';
+        client.clientType = parts[2] || 'standard';
+      }
       return client;
     });
   }
 
   async saveClient(client) {
+    // Encode extra data into status to avoid modifying Supabase schema
+    const safeStatus = (client.status || 'new').split('||')[0];
+    const encodedStatus = `${safeStatus}||${client.city || ''}||${client.clientType || 'standard'}`;
+
     // Sanitize payload for Supabase schema
     const payload = {
       id: client.id,
@@ -185,16 +181,21 @@ class SupabaseDB {
       spent: client.spent,
       orderscount: client.ordersCount || client.orderscount || 0,
       lastorder: client.lastOrder || client.lastorder || new Date().toISOString(),
-      status: client.status
+      status: encodedStatus
     };
     
     const { data, error } = await supabase.from('clients').upsert(payload).select();
     if (error) throw error;
     
-    // Polyfill locally
-    if (client.city) {
-      localStorage.setItem(`koala_client_meta_${client.id}`, JSON.stringify({ city: client.city }));
+    // Parse back before returning
+    const savedClient = data?.[0] || client;
+    if (savedClient.status && savedClient.status.includes('||')) {
+      const parts = savedClient.status.split('||');
+      savedClient.status = parts[0];
+      savedClient.city = parts[1] || '';
+      savedClient.clientType = parts[2] || 'standard';
     }
+    return savedClient;
     
     return data?.[0] || client;
   }

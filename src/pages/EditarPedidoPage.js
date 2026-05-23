@@ -6,6 +6,7 @@
 import { icon } from '../utils/icons.js';
 import { formatCurrency } from '../utils/formatters.js';
 import { localDb } from '../utils/localDb.js';
+import { updateOrderFinancials } from '../utils/orderLogic.js';
 
 let currentOrder = null;
 let inventory = [];
@@ -37,9 +38,29 @@ export function renderEditarPedidoPage(params) {
             <p style="color:var(--color-text-muted);">Cargando...</p>
           </div>
           
-          <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--color-neutral-divider); display: flex; justify-content: space-between; font-size: 18px; font-weight: bold;">
+          <div style="margin-top: 16px; display: flex; justify-content: space-between; align-items: center; font-size: 14px;">
+            <span>Envío:</span>
+            <input type="number" id="edit-order-shipping" class="auth-input" style="width: 80px; text-align: right;" min="0" step="0.01" />
+          </div>
+          
+          <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--color-neutral-divider); display: flex; justify-content: space-between; font-size: 18px; font-weight: bold;">
             <span>Total:</span>
             <span id="order-total-display">$0.00</span>
+          </div>
+
+          <!-- Abonos / Pagos -->
+          <div style="margin-top: 24px; background: var(--color-bg-main); border: 1px solid var(--color-neutral-border); border-radius: 8px; padding: 16px;">
+            <h3 style="font-size: 14px; margin-bottom: 12px; display: flex; justify-content: space-between;">
+              Abonos Realizados
+              <button class="btn btn--outline" id="btn-add-payment" style="padding: 4px 8px; font-size: 12px;">+ Registrar Pago</button>
+            </h3>
+            <div id="order-payments-list" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px;"></div>
+            
+            <div style="border-top: 1px dashed var(--color-neutral-divider); padding-top: 12px; display: flex; justify-content: space-between; font-size: 16px; font-weight: 700;">
+              <span>Balance Pendiente:</span>
+              <span id="order-balance-display" style="color: var(--color-error);">$0.00</span>
+            </div>
+            <div id="order-latefee-alert" style="color: var(--color-error); font-size: 12px; margin-top: 8px; display: none;"></div>
           </div>
         </div>
 
@@ -93,11 +114,41 @@ export async function initEditarPedidoPage(params) {
       renderInventory(e.target.value.toLowerCase());
     });
 
+    document.getElementById('edit-order-shipping').value = currentOrder.shippingCost || 0;
+    
+    // Auto Update Shipping Input
+    document.getElementById('edit-order-shipping').addEventListener('input', (e) => {
+      const val = parseFloat(e.target.value) || 0;
+      currentOrder.shippingCost = val;
+      renderCurrentItems(); // to trigger financial recalculation
+    });
+    
+    // Add Payment Logic
+    document.getElementById('btn-add-payment').addEventListener('click', () => {
+      const amount = prompt('Cantidad pagada ($):');
+      if (amount) {
+        const val = parseFloat(amount);
+        if (!isNaN(val) && val > 0) {
+          const method = prompt('Método (Ej. ATH Móvil, Cash):', 'ATH Móvil') || 'ATH Móvil';
+          if (!currentOrder.payments) currentOrder.payments = [];
+          currentOrder.payments.push({
+            date: new Date().toISOString(),
+            amount: val,
+            method
+          });
+          renderCurrentItems();
+        }
+      }
+    });
+
     // Save
     document.getElementById('btn-save-order').addEventListener('click', async () => {
-      // Recalculate summary fields
+      // Recalculate base items total
       currentOrder.total = currentOrder.itemsList.reduce((sum, item) => sum + (item.price * item.qty), 0);
       currentOrder.items = currentOrder.itemsList.reduce((sum, item) => sum + item.qty, 0);
+      
+      // Update advanced financials (late fees, balances)
+      currentOrder = updateOrderFinancials(currentOrder);
 
       const btn = document.getElementById('btn-save-order');
       btn.innerHTML = `${icon('check', 16)} Guardado`;
@@ -155,7 +206,51 @@ function renderCurrentItems() {
     `;
   }).join('');
 
-  totalDisplay.textContent = formatCurrency(total);
+  // Trigger Financial update
+  currentOrder.total = total;
+  currentOrder = updateOrderFinancials(currentOrder);
+
+  totalDisplay.textContent = formatCurrency((currentOrder.total || 0) + (currentOrder.shippingCost || 0));
+  
+  const balanceDisplay = document.getElementById('order-balance-display');
+  balanceDisplay.textContent = formatCurrency(currentOrder.pendingBalance);
+  balanceDisplay.style.color = currentOrder.pendingBalance > 0 ? 'var(--color-error)' : 'var(--color-success)';
+
+  const lateFeeAlert = document.getElementById('order-latefee-alert');
+  if (currentOrder.lateFee > 0) {
+    lateFeeAlert.style.display = 'block';
+    lateFeeAlert.textContent = `⚠️ Incluye recargo por atraso de ${currentOrder.lateDays} días (${formatCurrency(currentOrder.lateFee)}).`;
+  } else {
+    lateFeeAlert.style.display = 'none';
+  }
+  
+  const paymentsList = document.getElementById('order-payments-list');
+  if (!currentOrder.payments || currentOrder.payments.length === 0) {
+    paymentsList.innerHTML = `<span style="color:var(--color-text-muted); font-size: 12px; font-style: italic;">No hay abonos registrados</span>`;
+  } else {
+    paymentsList.innerHTML = currentOrder.payments.map((p, idx) => `
+      <div style="display:flex; justify-content:space-between; font-size:13px; padding: 8px; background:var(--color-bg-surface); border-radius:4px; border: 1px solid var(--color-neutral-border);">
+        <div>
+          <strong>${formatCurrency(p.amount)}</strong>
+          <span style="color:var(--color-text-secondary); margin-left:8px;">${p.method}</span>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <span style="color:var(--color-text-muted); font-size:11px;">${new Date(p.date).toLocaleDateString()}</span>
+          <button type="button" class="btn btn--icon remove-payment-btn" data-index="${idx}" style="color:var(--color-error); padding: 2px;">
+            ${icon('x', 14)}
+          </button>
+        </div>
+      </div>
+    `).join('');
+    
+    paymentsList.querySelectorAll('.remove-payment-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const idx = parseInt(e.currentTarget.getAttribute('data-index'));
+        currentOrder.payments.splice(idx, 1);
+        renderCurrentItems();
+      });
+    });
+  }
 
   // Bind change events
   list.querySelectorAll('.qty-input').forEach(input => {
