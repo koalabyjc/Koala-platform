@@ -7,7 +7,6 @@ import { icon } from '../utils/icons.js';
 import { localDb } from '../utils/localDb.js';
 import { classifyProduct } from '../utils/autoClassifier.js';
 import { renderSizePicker } from '../utils/sizeChart.js';
-import { processImage } from '../utils/mediaEngine.js';
 
 let uploadedImages = []; // Array of base64 strings
 let selectedSizes = [];
@@ -298,19 +297,22 @@ export async function initNuevoProductoPage() {
     previewGrid.appendChild(loadingCard);
 
     try {
-      // Execute the Luxury Automated Media Engine process!
-      const processed = await processImage(file, { autoBackgroundRemoval: true });
-      
-      // Remove loading placeholder
-      const placeholderEl = document.getElementById('loading-placeholder-card');
-      if (placeholderEl) placeholderEl.remove();
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const placeholderEl = document.getElementById('loading-placeholder-card');
+        if (placeholderEl) placeholderEl.remove();
 
-      // Save processed luxury WebP URL
-      uploadedImages.push(processed.resultBase64);
-      renderPreviews();
+        uploadedImages.push(e.target.result);
+        renderPreviews();
+      };
+      reader.onerror = (err) => {
+        console.error(err);
+        alert('Error leyendo la imagen');
+        renderPreviews();
+      };
+      reader.readAsDataURL(file);
     } catch (err) {
       console.error(err);
-      alert('Error en el pipeline de imagen de KOALA: ' + err.message);
       renderPreviews();
     }
   }
