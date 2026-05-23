@@ -93,10 +93,6 @@ export function renderProductosPage() {
               ${icon('plus', 14)}
               Entrada Manual
             </button>
-            <button class="btn btn--primary" onclick="window.location.hash='/admin/media'" style="background: linear-gradient(135deg, var(--color-primary), var(--color-accent)); border: none; box-shadow: var(--shadow-glow); gap: var(--space-1); flex-shrink: 0; padding: 8px 16px;">
-              ${icon('zap', 14)}
-              Entrada Inteligente
-            </button>
           </div>
         </div>
       </div>
