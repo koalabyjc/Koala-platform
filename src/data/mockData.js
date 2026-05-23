@@ -152,7 +152,6 @@ export const navigationItems = [
   { id: 'dashboard', label: 'Dashboard', icon: 'layout-dashboard', path: '/admin' },
   { id: 'clientes', label: 'Clientes', icon: 'users', path: '/admin/clientes' },
   { id: 'productos', label: 'Productos', icon: 'shopping-bag', path: '/admin/productos' },
-  { id: 'media', label: 'Media Engine', icon: 'image', path: '/admin/media' },
   { id: 'marcas', label: 'Marcas', icon: 'tag', path: '/admin/marcas' },
   { id: 'ventas', label: 'Ventas', icon: 'bar-chart-2', path: '/admin/ventas' },
   { id: 'finanzas', label: 'Finanzas', icon: 'wallet', path: '/admin/finanzas' }

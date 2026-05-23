@@ -17,7 +17,6 @@ import './styles/store.css';
 import './styles/auth.css';
 import './styles/dropdown.css';
 import './styles/modal.css';
-import './styles/mediaPipeline.css';
 
 /* Components (Admin) */
 import { renderSidebar, updateSidebarActiveState, initSidebarMobile } from './components/sidebar/Sidebar.js';
@@ -38,7 +37,6 @@ import { renderFinanzasPage, initFinanzasPage } from './pages/FinanzasPage.js';
 import { renderPlaceholderPage } from './pages/PlaceholderPage.js';
 import { renderLoginPage, initLoginPage } from './pages/LoginPage.js';
 import { renderConfiguracionPage, initConfiguracionPage } from './pages/ConfiguracionPage.js';
-import { renderMediaEnginePage, initMediaEnginePage } from './pages/MediaEnginePage.js';
 
 /* Pages (Store) */
 import { renderHomePage, initHomePage } from './store/HomePage.js';
@@ -174,9 +172,6 @@ class KoalaApp {
     });
     this.router.register('/admin/productos', () => {
       this.renderPage(renderProductosPage(), () => initProductosPage());
-    });
-    this.router.register('/admin/media', () => {
-      this.renderPage(renderMediaEnginePage(), () => initMediaEnginePage());
     });
     this.router.register('/admin/productos/nuevo', () => {
       this.renderPage(renderNuevoProductoPage(), () => initNuevoProductoPage());
