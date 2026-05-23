@@ -1,5 +1,5 @@
 /* ==========================================================================
-   KOALA — Luxury Automated Media Engine UI Page
+   KOALA — Universal AI Product Normalization System UI Page
    Vibrant, minimal and highly interactive image pipeline admin panel.
    Strict Separation of Concerns (SoC) — Presentational Layer.
    ========================================================================== */
@@ -14,10 +14,7 @@ let processingResult = null;
 // Default values matching KOALA Visual System v1
 let activeBgColor = '#FAF7F3'; 
 let activePadding = 10;
-let activeShadowOpacity = 5;
-let activeBrightness = 2;
-let activeContrast = 1;
-let activeWarmth = 3;
+let activeShadowOpacity = 15;
 let activeAutoBG = true;
 
 export function renderMediaEnginePage() {
@@ -26,8 +23,8 @@ export function renderMediaEnginePage() {
       <!-- Page Title Header -->
       <div class="module-header" style="margin-bottom: 24px;">
         <div>
-          <h1 class="module-header__title" style="font-family: var(--font-display); font-weight: var(--weight-bold); font-size: var(--text-3xl); color: var(--color-text-primary); margin: 0 0 6px 0;">Media Engine</h1>
-          <p class="module-header__subtitle" style="font-family: var(--font-body); color: var(--color-text-secondary); font-size: var(--text-sm); margin: 0;">Automatización multimedia inteligente e inspección de calidad premium</p>
+          <h1 class="module-header__title" style="font-family: var(--font-display); font-weight: var(--weight-bold); font-size: var(--text-3xl); color: var(--color-text-primary); margin: 0 0 6px 0;">Universal AI Studio</h1>
+          <p class="module-header__subtitle" style="font-family: var(--font-body); color: var(--color-text-secondary); font-size: var(--text-sm); margin: 0;">Aislamiento IA y Normalización Premium (0% Distorsión de Color)</p>
         </div>
         <div class="module-toolbar">
           <button id="btn-reset-engine" class="btn btn--secondary" style="display: none;">
@@ -51,9 +48,9 @@ export function renderMediaEnginePage() {
             <div class="luxury-dropzone__icon">
               ${icon('upload-cloud', 32)}
             </div>
-            <h3 style="font-family: var(--font-display); font-size: 18px; margin: 0; color: var(--color-text-primary);"> Luxury Media Uploader </h3>
+            <h3 style="font-family: var(--font-display); font-size: 18px; margin: 0; color: var(--color-text-primary);"> Universal Media Uploader </h3>
             <p style="font-family: var(--font-body); font-size: 12px; color: var(--color-text-secondary); text-align: center; max-width: 320px; line-height: 1.5; margin: 0;">
-              Arrastra una foto de catálogo o campaña aquí. El sistema la alineará y normalizará al instante.
+              Sube sneakers, ropa, carteras, joyería, lo que sea. La IA recortará el fondo perfectamente respetando el color real.
             </p>
             <span style="font-size: 10px; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Soporta JPG, PNG, WEBP (Hasta 10MB)</span>
           </div>
@@ -65,24 +62,24 @@ export function renderMediaEnginePage() {
               <img id="processing-temp-img" src="" alt="Processing..." />
             </div>
             
-            <h4 id="processing-stage-title" style="margin: 0; font-family: var(--font-body); font-size: 14px; font-weight: 700; color: var(--color-text-primary);">Aislando Silueta del Producto...</h4>
+            <h4 id="processing-stage-title" style="margin: 0; font-family: var(--font-body); font-size: 14px; font-weight: 700; color: var(--color-text-primary);">Analizando Producto...</h4>
             
             <div class="pipeline-stages">
               <div class="stage-item stage-item--pending" id="stage-analyzing">
                 <div class="stage-dot"></div>
-                <span class="stage-label">Validando Resolución & Orientación</span>
+                <span class="stage-label">Validando Calidad de Imagen</span>
               </div>
               <div class="stage-item stage-item--pending" id="stage-bg">
                 <div class="stage-dot"></div>
-                <span class="stage-label">Aislamiento Editorial de Fondo</span>
+                <span class="stage-label">AI Silhouette Extraction Engine (WASM)</span>
               </div>
               <div class="stage-item stage-item--pending" id="stage-lighting">
                 <div class="stage-dot"></div>
-                <span class="stage-label">Luxury Soft Lighting & Shadow Plane</span>
+                <span class="stage-label">Smart Centering & Shadow Floor</span>
               </div>
               <div class="stage-item stage-item--pending" id="stage-comp">
                 <div class="stage-dot"></div>
-                <span class="stage-label">Optimización de Tamaño & Formato WebP</span>
+                <span class="stage-label">Optimización Universal WebP</span>
               </div>
             </div>
           </div>
@@ -90,7 +87,7 @@ export function renderMediaEnginePage() {
           <!-- Interactive Before / After Split Slider Visualizer -->
           <div class="compare-slider-container" id="compare-visualizer" style="display: none;">
             <div class="safe-zone-overlay">
-              <span class="safe-zone-label">Margen Seguro 10%</span>
+              <span class="safe-zone-label" id="safe-zone-label-text">Margen Seguro 10%</span>
             </div>
             
             <!-- Before Image (Left under clip-path) -->
@@ -131,7 +128,7 @@ export function renderMediaEnginePage() {
                   <div id="metric-reduction" style="font-size: 14px; font-weight: 700; color: var(--color-success); margin-top: 2px;">-94%</div>
                 </div>
                 <div style="background: var(--color-bg-elevated); padding: 8px 12px; border-radius: var(--radius-md); border: 1px solid var(--color-neutral-border);">
-                  <div style="font-size: 9px; color: var(--color-text-muted); font-weight: 600; text-transform: uppercase;">Velocidad Pipeline</div>
+                  <div style="font-size: 9px; color: var(--color-text-muted); font-weight: 600; text-transform: uppercase;">Velocidad IA</div>
                   <div id="metric-speed" style="font-size: 14px; font-weight: 700; color: var(--color-primary); margin-top: 2px;">118ms</div>
                 </div>
               </div>
@@ -141,7 +138,7 @@ export function renderMediaEnginePage() {
           <!-- Interactive adjustment controls -->
           <div class="card" style="padding: var(--space-5);">
             <h3 style="font-family: var(--font-display); font-size: 16px; margin: 0 0 16px 0; color: var(--color-text-primary); border-bottom: 1px solid var(--color-neutral-divider); padding-bottom: 10px;">
-              Ajustes de Lujo KOALA v1
+              Ajustes Universales KOALA
             </h3>
             
             <div class="param-controls-grid">
@@ -171,39 +168,31 @@ export function renderMediaEnginePage() {
                   <span>Padding de Seguridad</span>
                   <span id="label-padding">10%</span>
                 </div>
-                <input type="range" id="slider-padding" class="param-slider" min="5" max="25" value="10" />
+                <input type="range" id="slider-padding" class="param-slider" min="0" max="35" value="10" />
               </div>
 
               <!-- Shadow Opacity Slider -->
               <div class="param-slider-group">
                 <div class="param-slider-header">
-                  <span>Opacidad Sombra Estudio</span>
-                  <span id="label-shadow">5%</span>
+                  <span>Sombra de Contacto (Piso)</span>
+                  <span id="label-shadow">15%</span>
                 </div>
-                <input type="range" id="slider-shadow" class="param-slider" min="0" max="15" value="5" />
+                <input type="range" id="slider-shadow" class="param-slider" min="0" max="40" value="15" />
               </div>
 
-              <!-- Studio Lighting Warmth -->
-              <div class="param-slider-group">
-                <div class="param-slider-header">
-                  <span>Temperatura (Warmth Shift)</span>
-                  <span id="label-warmth">3%</span>
+              <!-- INFO ALERT: Color lock -->
+              <div style="margin-top: 10px; padding: 10px; background: rgba(59, 130, 246, 0.1); border-left: 3px solid #3b82f6; border-radius: 4px;">
+                <div style="font-size: 11px; font-weight: 600; color: #3b82f6; display: flex; align-items: center; gap: 6px;">
+                  ${icon('lock', 12)} Fidelidad de Color Asegurada
                 </div>
-                <input type="range" id="slider-warmth" class="param-slider" min="0" max="10" value="3" />
-              </div>
-
-              <!-- Brightness -->
-              <div class="param-slider-group">
-                <div class="param-slider-header">
-                  <span>Exposición / Brillo</span>
-                  <span id="label-brightness">+2%</span>
-                </div>
-                <input type="range" id="slider-brightness" class="param-slider" min="-10" max="15" value="2" />
+                <p style="margin: 4px 0 0 0; font-size: 11px; color: var(--color-text-secondary); line-height: 1.4;">
+                  KOALA preserva automáticamente el 100% de los colores y texturas originales del producto.
+                </p>
               </div>
 
               <!-- Bounding Box toggle -->
-              <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 8px; border-top: 1px solid var(--color-neutral-divider);">
-                <span style="font-size: 12px; font-weight: 600; color: var(--color-text-secondary);">Aislamiento IA de Fondo</span>
+              <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 12px; border-top: 1px solid var(--color-neutral-divider);">
+                <span style="font-size: 12px; font-weight: 600; color: var(--color-text-secondary);">Recorte IA de Fondo</span>
                 <label class="switch-container" style="position: relative; display: inline-block; width: 36px; height: 20px;">
                   <input type="checkbox" id="toggle-autobg" style="opacity: 0; width: 0; height: 0;" checked />
                   <span class="slider-round" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--color-neutral-soft); transition: .4s; border-radius: 20px;"></span>
@@ -349,23 +338,34 @@ async function loadAndProcessFile(file) {
     
     // Animate stage status step by step
     setStageState('stage-analyzing', 'active');
-    await waitMs(600);
-    setStageState('stage-analyzing', 'complete');
     
-    setStageState('stage-bg', 'active');
-    await waitMs(800);
-    setStageState('stage-bg', 'complete');
-    
-    setStageState('stage-lighting', 'active');
-    await waitMs(600);
-    setStageState('stage-lighting', 'complete');
-    
-    setStageState('stage-comp', 'active');
+    // Trigger Image Pipeline and listen to progress
+    const onProgress = (step, pct) => {
+      if (step === 'background_removal') {
+         setStageState('stage-analyzing', 'complete');
+         setStageState('stage-bg', 'active');
+         document.getElementById('processing-stage-title').textContent = 'Descargando Motor de IA (La primera vez demora unos segundos)...';
+      }
+      if (step.startsWith('background_removal_model')) {
+         document.getElementById('processing-stage-title').textContent = `Recortando fondo con IA (${Math.round(pct)}%)...`;
+      }
+      if (step === 'centering') {
+         setStageState('stage-bg', 'complete');
+         setStageState('stage-lighting', 'active');
+         document.getElementById('processing-stage-title').textContent = 'Alineando Producto...';
+      }
+      if (step === 'compression') {
+         setStageState('stage-lighting', 'complete');
+         setStageState('stage-comp', 'active');
+         document.getElementById('processing-stage-title').textContent = 'Optimizando formato WEBP...';
+      }
+    };
     
     // Execute luxury automated render
-    await triggerImagePipeline();
+    await triggerImagePipeline(onProgress);
     
     setStageState('stage-comp', 'complete');
+    document.getElementById('processing-stage-title').textContent = '¡Listo!';
     await waitMs(300);
 
     // Swap to Split Compare Screen!
@@ -392,7 +392,7 @@ async function loadAndProcessFile(file) {
 
   } catch (err) {
     console.error(err);
-    alert('Ocurrió un error en el pipeline: ' + err.message);
+    alert('Ocurrió un error en el pipeline IA: ' + err.message);
     dropzone.style.display = 'flex';
     procView.style.display = 'none';
   }
@@ -411,18 +411,15 @@ function setStageState(id, state) {
 /**
  * Triggers the core processImage with current parameters and saves to processingResult
  */
-async function triggerImagePipeline() {
+async function triggerImagePipeline(onProgress = null) {
   if (!activeFile) return;
 
   const result = await processImage(activeFile, {
     bgColor: activeBgColor,
     padding: activePadding / 100,
     shadowOpacity: activeShadowOpacity / 100,
-    brightness: 1.0 + (activeBrightness / 100),
-    contrast: 1.0 + (activeContrast / 100),
-    warmth: activeWarmth / 100,
     autoBackgroundRemoval: activeAutoBG
-  });
+  }, onProgress);
 
   processingResult = result;
 }
@@ -436,7 +433,7 @@ function populateQualityReport() {
 
   warnContainer.innerHTML = '';
   
-  if (validationReport && validationReport.warnings.length > 0) {
+  if (validationReport && validationReport.warnings && validationReport.warnings.length > 0) {
     validationReport.warnings.forEach(warning => {
       const item = document.createElement('div');
       item.className = 'warning-item';
@@ -451,7 +448,7 @@ function populateQualityReport() {
     warnContainer.innerHTML = `
       <div style="display: flex; gap: 8px; align-items: center; padding: 10px; background: var(--color-success-bg); color: var(--color-success); border-radius: var(--radius-sm); font-size: 11px;">
         ${icon('check', 14)}
-        <span>Foco, encuadre y resolución cumplen 100% las directrices premium de KOALA.</span>
+        <span>Fidelidad preservada al 100%. Color intacto.</span>
       </div>
     `;
   }
@@ -477,8 +474,6 @@ function setupParamSliders() {
   const bgSelector = document.getElementById('bg-color-selector');
   const sPadding = document.getElementById('slider-padding');
   const sShadow = document.getElementById('slider-shadow');
-  const sWarmth = document.getElementById('slider-warmth');
-  const sBrightness = document.getElementById('slider-brightness');
   const toggleBG = document.getElementById('toggle-autobg');
 
   const reprocess = async () => {
@@ -508,6 +503,8 @@ function setupParamSliders() {
     sPadding.addEventListener('input', () => {
       activePadding = parseInt(sPadding.value);
       document.getElementById('label-padding').textContent = `${activePadding}%`;
+      const txt = document.getElementById('safe-zone-label-text');
+      if (txt) txt.textContent = `Margen Seguro ${activePadding}%`;
     });
     sPadding.addEventListener('change', reprocess);
   }
@@ -518,23 +515,6 @@ function setupParamSliders() {
       document.getElementById('label-shadow').textContent = `${activeShadowOpacity}%`;
     });
     sShadow.addEventListener('change', reprocess);
-  }
-
-  if (sWarmth) {
-    sWarmth.addEventListener('input', () => {
-      activeWarmth = parseInt(sWarmth.value);
-      document.getElementById('label-warmth').textContent = `${activeWarmth}%`;
-    });
-    sWarmth.addEventListener('change', reprocess);
-  }
-
-  if (sBrightness) {
-    sBrightness.addEventListener('input', () => {
-      activeBrightness = parseInt(sBrightness.value);
-      const sign = activeBrightness >= 0 ? '+' : '';
-      document.getElementById('label-brightness').textContent = `${sign}${activeBrightness}%`;
-    });
-    sBrightness.addEventListener('change', reprocess);
   }
 
   if (toggleBG) {
