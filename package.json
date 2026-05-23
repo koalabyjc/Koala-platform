@@ -1,0 +1,19 @@
+{
+  "name": "koala-platform",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "KOALA by JC — Fashion Commerce Platform + Administrative Dashboard",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "chart.js": "^4.5.1",
+    "vite": "^8.0.13"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.105.4"
+  }
+}
