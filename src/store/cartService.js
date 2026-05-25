@@ -25,13 +25,13 @@ class CartService {
     this.notify();
   }
 
-  removeItem(productId) {
-    this.items = this.items.filter(item => item.id !== productId);
+  removeItem(productId, selectedSize = '') {
+    this.items = this.items.filter(item => !(item.id === productId && (item.selectedSize || '') === selectedSize));
     this.notify();
   }
 
-  updateQuantity(productId, quantity) {
-    const item = this.items.find(item => item.id === productId);
+  updateQuantity(productId, selectedSize = '', quantity) {
+    const item = this.items.find(item => item.id === productId && (item.selectedSize || '') === selectedSize);
     if (item) {
       item.quantity = Math.max(1, quantity);
       this.notify();

@@ -6,11 +6,8 @@
 import { icon } from '../utils/icons.js';
 import { formatCurrency } from '../utils/formatters.js';
 import { localDb } from '../utils/localDb.js';
-import { Chart, registerables } from 'chart.js';
+import { readyService } from '../utils/readyService.js';
 
-Chart.register(...registerables);
-
-let dashboardChart = null;
 
 export function renderDashboardPage() {
   return `
@@ -25,10 +22,10 @@ export function renderDashboardPage() {
             <div class="kpi-card__value" id="kpi-revenue">$0.00</div>
           </div>
         </div>
-        <div class="kpi-card hover-lift" style="border-left: 3px solid var(--color-error);">
+        <div class="kpi-card hover-lift" id="btn-receivables" style="border-left: 3px solid var(--color-error); cursor: pointer;" title="Haz clic para ver detalles">
           <div class="kpi-card__icon kpi-card__icon--primary" style="color: var(--color-error); background: rgba(239,68,68,0.1);">${icon('alert-circle', 24) || icon('clock', 24)}</div>
           <div class="kpi-card__content">
-            <div class="kpi-card__label">Por Cobrar</div>
+            <div class="kpi-card__label">Por Cobrar <span style="font-size:10px; opacity:0.6;">(Click para ver)</span></div>
             <div class="kpi-card__value" id="kpi-receivables">$0.00</div>
           </div>
         </div>
@@ -48,24 +45,65 @@ export function renderDashboardPage() {
         </div>
       </div>
 
+      <!-- KOALA READY Overview -->
+      <div class="ready-overview animate-fade-in-up" id="ready-overview-card" style="margin-bottom: 24px;">
+        <div class="ready-overview__header">
+          <div class="ready-overview__title">
+            <span class="ready-overview__title-icon">⚡</span>
+            KOALA READY
+          </div>
+          <span class="ready-overview__status ready-overview__status--inactive" id="ready-overview-status">Sin inventario</span>
+        </div>
+        <div class="ready-overview__stats">
+          <div class="ready-overview__stat">
+            <div class="ready-overview__stat-value" id="ready-stat-active">0</div>
+            <div class="ready-overview__stat-label">Activos</div>
+          </div>
+          <div class="ready-overview__stat">
+            <div class="ready-overview__stat-value" id="ready-stat-featured">OFF</div>
+            <div class="ready-overview__stat-label">Anuncio</div>
+          </div>
+          <div class="ready-overview__stat">
+            <div class="ready-overview__stat-value" id="ready-stat-sales">$0.00</div>
+            <div class="ready-overview__stat-label">Ventas Sem.</div>
+          </div>
+          <div class="ready-overview__stat">
+            <div class="ready-overview__stat-value" id="ready-stat-latest">—</div>
+            <div class="ready-overview__stat-label">Último</div>
+          </div>
+        </div>
+        <div class="ready-overview__actions">
+          <button class="ready-overview__action-btn" onclick="window.location.hash='/admin/ready'">⚡ Gestionar READY</button>
+          <button class="ready-overview__action-btn" onclick="window.location.hash='/ready'">👁 Ver Tienda</button>
+        </div>
+      </div>
+
       <!-- Main Content Row -->
       <div class="middle-row">
-        <!-- Sales Chart -->
-        <div class="card animate-fade-in-up" style="flex: 2;">
-          <div class="card__header">
-            <h2 class="card__title" id="dashboard-chart-title">
-              <span class="card__title-icon">${icon('bar-chart-2', 20)}</span>
-              Rendimiento de Ventas
+        <!-- Recent Orders -->
+        <div class="card animate-fade-in-up" style="flex: 2; display: flex; flex-direction: column;">
+          <div class="card__header" style="display: flex; justify-content: space-between; align-items: center;">
+            <h2 class="card__title">
+              <span class="card__title-icon">${icon('shopping-bag', 20)}</span>
+              Pedidos Recientes
             </h2>
-            <select id="dashboard-period-select" class="auth-input" style="min-width: 150px; padding: 4px 8px; font-size: 12px; height: 32px;">
-              <option value="diario">Diario</option>
-              <option value="semanal">Semanal</option>
-              <option value="mensual" selected>Mensual</option>
-              <option value="anual">Anual</option>
-            </select>
+            <button class="btn btn--ghost" onclick="window.location.hash='/admin/ventas'" style="font-size: 12px; font-weight: 600; padding: 4px 8px;">Ver Todos</button>
           </div>
-          <div class="chart-container" style="height: 300px; padding: 20px;">
-            <canvas id="dashboardChart"></canvas>
+          <div style="flex: 1; overflow-x: auto; padding: 12px;">
+            <table class="ready-table" style="width: 100%; border-collapse: collapse; min-width: 500px;">
+              <thead>
+                <tr>
+                  <th style="font-size: 11px; padding: 8px 12px; background:var(--color-bg-main);">ID</th>
+                  <th style="font-size: 11px; padding: 8px 12px; background:var(--color-bg-main);">Cliente</th>
+                  <th style="font-size: 11px; padding: 8px 12px; background:var(--color-bg-main);">Total</th>
+                  <th style="font-size: 11px; padding: 8px 12px; background:var(--color-bg-main);">Estado</th>
+                  <th style="font-size: 11px; padding: 8px 12px; background:var(--color-bg-main); text-align: right;">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="dashboard-recent-orders">
+                <!-- Injected dynamically -->
+              </tbody>
+            </table>
           </div>
         </div>
 
@@ -74,7 +112,7 @@ export function renderDashboardPage() {
           
           <!-- Top 5 Products -->
           <div class="card animate-fade-in-up">
-            <div class="card__header">
+            <div class="card__header" style="display:flex; justify-content:space-between; align-items:center;">
               <h2 class="card__title">Top 5 Productos</h2>
             </div>
             <div class="products-list" id="dashboard-top-products">
@@ -86,6 +124,11 @@ export function renderDashboardPage() {
                   <div class="skeleton" style="width: 60px; height: 12px; flex-shrink: 0;"></div>
                 </div>
               `).join('')}
+            </div>
+            <div style="padding: 12px; border-top: 1px solid var(--color-neutral-divider); text-align: center;">
+              <button class="btn btn--ghost" id="btn-edit-top-products" style="width: 100%; font-size: 13px; font-weight: 600; gap: 8px;">
+                ${icon('edit-2', 16) || icon('edit', 16)} Administrar Top 5 Manualmente
+              </button>
             </div>
           </div>
 
@@ -148,9 +191,58 @@ export function renderDashboardPage() {
               <div id="dash-modal-sizes" style="display:flex; flex-wrap:wrap; gap:6px;"></div>
             </div>
             
-            <button class="btn btn--primary" style="width: 100%; height:44px; font-size:14px;" id="btn-edit-from-dash">
-              ${icon('edit', 16)} Ir a Editar Producto
-            </button>
+            <div style="display:flex; gap: 8px;">
+              <button class="btn btn--secondary" style="flex:1; height:44px; font-size:13px; font-weight:600;" id="btn-pin-top-dash">
+                ${icon('star', 16)} Fijar en Top 5
+              </button>
+              <button class="btn btn--primary" style="flex:1; height:44px; font-size:13px; font-weight:600;" id="btn-edit-from-dash">
+                ${icon('edit', 16)} Ir a Editar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Receivables Modal -->
+      <div class="modal-overlay" id="receivables-modal">
+        <div class="modal" style="max-width: 600px; padding: 0; border-radius: 16px; overflow: hidden; max-height: 85vh; display: flex; flex-direction: column;">
+          <div style="display:flex; align-items:center; justify-content:space-between; padding: 20px; border-bottom: 1px solid var(--color-neutral-divider); background: var(--color-bg-surface);">
+            <div>
+              <h2 style="font-size: 18px; font-weight: 700; margin-bottom: 4px;">Cuentas Por Cobrar</h2>
+              <p style="font-size: 12px; color: var(--color-text-muted);">Clientes con balance pendiente</p>
+            </div>
+            <button class="btn btn--icon" id="close-receivables-modal">${icon('x', 24)}</button>
+          </div>
+          <div style="padding: 0; overflow-y: auto; flex: 1; background: var(--color-bg-main);" id="receivables-list">
+             <!-- Dynamic list goes here -->
+          </div>
+          <div style="padding: 16px 20px; background: var(--color-bg-surface); border-top: 1px solid var(--color-neutral-divider); display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-weight: 600; font-size: 14px;">Total Por Cobrar:</span>
+            <span style="font-weight: 700; font-size: 18px; color: var(--color-error);" id="receivables-modal-total">$0.00</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Edit Top Products Modal -->
+      <div class="modal-overlay" id="edit-top-modal">
+        <div class="modal" style="max-width: 450px; padding: 24px; border-radius: 16px;">
+          <h2 style="font-size: 18px; font-weight: 700; margin-bottom: 8px;">Editar Top 5</h2>
+          <p style="font-size: 12px; color: var(--color-text-muted); margin-bottom: 16px;">Selecciona hasta 5 productos para destacar en tu dashboard. Si dejas la lista vacía, se calcularán automáticamente.</p>
+          
+          <div style="margin-bottom: 16px;">
+            <select id="top-product-select" class="auth-input" style="width: 100%; margin-bottom: 12px; font-size:13px; height: 44px;">
+              <option value="">-- Buscar producto para agregar --</option>
+            </select>
+            <button class="btn btn--secondary" id="btn-add-top-product" style="width:100%; height: 40px; font-size:13px;">${icon('plus', 16)} Añadir a la lista</button>
+          </div>
+          
+          <div id="selected-top-products" style="display:flex; flex-direction:column; gap:8px; margin-bottom: 24px; min-height: 120px; background: var(--color-bg-subtle); padding: 12px; border-radius: 8px;">
+             <!-- Selected products go here -->
+          </div>
+          
+          <div style="display: flex; gap: 12px;">
+            <button class="btn btn--ghost" id="close-edit-top-modal" style="flex:1;">Cancelar</button>
+            <button class="btn btn--primary" id="save-edit-top-modal" style="flex:1;">Guardar Cambios</button>
           </div>
         </div>
       </div>
@@ -177,21 +269,162 @@ export async function initDashboard() {
     document.getElementById('kpi-orders').textContent = validOrders.length;
     document.getElementById('kpi-clients').textContent = clients.length;
 
-    // Setup Modal Logic
+    // Setup Dash Modal Logic
     const dashModal = document.getElementById('dashboard-product-modal');
     const closeDashModal = document.getElementById('close-dash-modal');
     const editBtn = document.getElementById('btn-edit-from-dash');
     
-    closeDashModal.addEventListener('click', () => dashModal.classList.remove('active'));
-    dashModal.addEventListener('click', (e) => {
-      if (e.target === dashModal) dashModal.classList.remove('active');
-    });
+    if(closeDashModal) closeDashModal.addEventListener('click', () => dashModal.classList.remove('active'));
+    if(dashModal) {
+      dashModal.addEventListener('click', (e) => {
+        if (e.target === dashModal) dashModal.classList.remove('active');
+      });
+    }
+
+    // Setup Receivables Modal Logic
+    const receivablesModal = document.getElementById('receivables-modal');
+    const closeRecModal = document.getElementById('close-receivables-modal');
+    const btnReceivables = document.getElementById('btn-receivables');
+
+    if (btnReceivables && receivablesModal) {
+      btnReceivables.addEventListener('click', () => {
+        const pendingOrders = validOrders.filter(o => (o.pendingBalance !== undefined ? o.pendingBalance : (o.total || 0)) > 0);
+        const customersPending = {};
+        
+        pendingOrders.forEach(o => {
+           const cName = o.customer || 'Cliente Desconocido';
+           if (!customersPending[cName]) {
+             customersPending[cName] = { name: cName, phone: o.customerPhone, email: o.customerEmail, balance: 0, orders: [] };
+           }
+           const bal = o.pendingBalance !== undefined ? o.pendingBalance : (o.total || 0);
+           customersPending[cName].balance += bal;
+           customersPending[cName].orders.push({ id: o.id, date: o.date, balance: bal });
+        });
+
+        const listHtml = Object.values(customersPending).sort((a,b) => b.balance - a.balance).map(c => {
+           return `
+             <div style="padding: 16px 20px; border-bottom: 1px solid var(--color-neutral-divider); background: var(--color-bg-surface); margin-bottom: 4px;">
+               <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                 <div>
+                   <div style="font-weight: 700; font-size: 15px;">${c.name}</div>
+                   <div style="font-size: 12px; color: var(--color-text-muted); display:flex; gap: 8px; margin-top: 4px;">
+                     ${c.phone ? `<span>${icon('phone', 12)} ${c.phone}</span>` : ''}
+                   </div>
+                 </div>
+                 <div style="font-weight: 700; color: var(--color-error); font-size: 16px;">
+                   ${formatCurrency(c.balance)}
+                 </div>
+               </div>
+               <div style="background: var(--color-bg-main); border-radius: 8px; padding: 12px;">
+                 <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--color-text-muted); margin-bottom: 8px;">Facturas Pendientes:</div>
+                 ${c.orders.map(o => `
+                   <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 0; font-size: 13px;">
+                     <div>
+                        <a href="#/admin/ventas?id=${o.id}" style="color: var(--color-primary); font-weight: 600; text-decoration: none;">#${o.id}</a>
+                        <span style="color: var(--color-text-muted); font-size: 11px; margin-left: 8px;">${new Date(o.date).toLocaleDateString()}</span>
+                     </div>
+                     <span style="font-weight: 600;">${formatCurrency(o.balance)}</span>
+                   </div>
+                 `).join('')}
+               </div>
+             </div>
+           `;
+        }).join('');
+
+        document.getElementById('receivables-list').innerHTML = listHtml || `<div style="padding: 40px; text-align: center; color: var(--color-text-muted);">No hay cuentas por cobrar. ¡Todo está al día! 🎉</div>`;
+        document.getElementById('receivables-modal-total').textContent = formatCurrency(totalReceivables);
+        
+        receivablesModal.classList.add('active');
+      });
+
+      if(closeRecModal) closeRecModal.addEventListener('click', () => receivablesModal.classList.remove('active'));
+      receivablesModal.addEventListener('click', (e) => {
+        if (e.target === receivablesModal) receivablesModal.classList.remove('active');
+      });
+    }
 
     // Make products available in scope for click handlers
     const products = await localDb.getAllProducts();
     const topProductsList = await localDb.getTop5Products();
+
+    // Setup Edit Top 5 Logic
+    const editTopModal = document.getElementById('edit-top-modal');
+    const btnEditTop = document.getElementById('btn-edit-top-products');
+    const closeEditTop = document.getElementById('close-edit-top-modal');
+    const saveEditTop = document.getElementById('save-edit-top-modal');
+    const selectTopProduct = document.getElementById('top-product-select');
+    const btnAddTop = document.getElementById('btn-add-top-product');
+    const selectedTopContainer = document.getElementById('selected-top-products');
+
+    if (btnEditTop && editTopModal) {
+      let currentManualTopIds = [];
+      try {
+        const stored = JSON.parse(localStorage.getItem('koala_top_products'));
+        if (Array.isArray(stored)) currentManualTopIds = stored;
+      } catch(e) {}
+
+      // Populate select options
+      const activeProducts = products.filter(p => p.status !== 'draft');
+      selectTopProduct.innerHTML = '<option value="">-- Buscar producto para agregar --</option>' + 
+        activeProducts.map(p => `<option value="${p.id}">${p.name} (${p.brand || 'KOALA'}) - ${formatCurrency(p.price || 0)}</option>`).join('');
+
+      const renderSelectedTop = () => {
+        if (currentManualTopIds.length === 0) {
+          selectedTopContainer.innerHTML = '<div style="text-align:center; color:var(--color-text-muted); font-size:12px; padding:20px;">No hay productos seleccionados. Usa el selector para añadir.</div>';
+        } else {
+          selectedTopContainer.innerHTML = currentManualTopIds.map((id, idx) => {
+            const p = products.find(prod => prod.id === id);
+            if(!p) return '';
+            return `
+              <div style="display:flex; justify-content:space-between; align-items:center; background:var(--color-bg-surface); padding:8px 12px; border-radius:6px; font-size:13px; border:1px solid var(--color-neutral-border);">
+                <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 12px;"><strong style="color:var(--color-primary);">${idx+1}.</strong> ${p.name}</span>
+                <button class="btn btn--icon remove-top-btn" data-id="${id}" style="width:24px;height:24px;color:var(--color-error);flex-shrink:0;">${icon('trash-2', 14)}</button>
+              </div>
+            `;
+          }).join('');
+          
+          selectedTopContainer.querySelectorAll('.remove-top-btn').forEach(btn => {
+            btn.onclick = () => {
+              const idToRemove = btn.getAttribute('data-id');
+              currentManualTopIds = currentManualTopIds.filter(id => id !== idToRemove);
+              renderSelectedTop();
+            };
+          });
+        }
+      };
+
+      btnEditTop.addEventListener('click', () => {
+        renderSelectedTop();
+        editTopModal.classList.add('active');
+      });
+
+      closeEditTop.addEventListener('click', () => editTopModal.classList.remove('active'));
+      
+      btnAddTop.addEventListener('click', () => {
+        const selectedId = selectTopProduct.value;
+        if (!selectedId) return;
+        if (currentManualTopIds.includes(selectedId)) {
+          alert('Este producto ya está en la lista de destacados.');
+          return;
+        }
+        if (currentManualTopIds.length >= 5) {
+          alert('Solo puedes destacar un máximo de 5 productos.');
+          return;
+        }
+        currentManualTopIds.push(selectedId);
+        selectTopProduct.value = '';
+        renderSelectedTop();
+      });
+
+      saveEditTop.addEventListener('click', async () => {
+        await localDb.saveTop5Products(currentManualTopIds);
+        editTopModal.classList.remove('active');
+        // Reload to reflect changes instantly on dashboard
+        window.location.reload();
+      });
+    }
     
-    // Calculate Top Products
+    // Calculate Top Products Html
     const topProductsHtml = topProductsList.map((p, index) => {
       // Determine if image is base64/url or just an emoji
       let imgHtml = '';
@@ -267,6 +500,29 @@ export async function initDashboard() {
           window.location.hash = '/admin/productos';
         };
 
+        // Pin to Top 5 logic
+        const btnPinTop = document.getElementById('btn-pin-top-dash');
+        if(btnPinTop) {
+          btnPinTop.onclick = async () => {
+            let manualIds = [];
+            try {
+              const stored = JSON.parse(localStorage.getItem('koala_top_products'));
+              if(Array.isArray(stored)) manualIds = stored;
+            } catch(e) {}
+            
+            if(manualIds.includes(productId)) {
+              alert('Este producto ya está fijado en el Top 5.');
+            } else {
+              manualIds.unshift(productId); // Add to beginning
+              if(manualIds.length > 5) manualIds = manualIds.slice(0, 5); // Keep only 5
+              await localDb.saveTop5Products(manualIds);
+              alert('¡Producto fijado al Top 5 exitosamente!');
+              dashModal.classList.remove('active');
+              window.location.reload();
+            }
+          };
+        }
+
         dashModal.classList.add('active');
       });
     });
@@ -288,105 +544,80 @@ export async function initDashboard() {
 
     document.getElementById('dashboard-top-clients').innerHTML = topClients.length ? topClients.join('') : '<div style="padding:20px; text-align:center; color:var(--color-text-muted);">No hay clientes</div>';
 
-    // Init Chart
-    const chartData = {
-      diario: {
-        labels: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'],
-        data: [50, 120, 80, 200, 250, 400, 150],
-        title: 'Ventas Diarias (Esta Semana)'
-      },
-      semanal: {
-        labels: ['Semana 1', 'Semana 2', 'Semana 3', 'Semana 4'],
-        data: [350, 450, 300, 600],
-        title: 'Ventas Semanales (Este Mes)'
-      },
-      mensual: {
-        labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'],
-        data: [150, 200, 100, 350, 450, 300],
-        title: 'Ventas Mensuales (Últimos 6 meses)'
-      },
-      anual: {
-        labels: ['2023', '2024', '2025', '2026'],
-        data: [250, 400, 600, 850],
-        title: 'Ventas Anuales (Histórico)'
+    // Populate Recent Orders
+    const recentOrders = orders.slice(0, 5);
+    const recentOrdersContainer = document.getElementById('dashboard-recent-orders');
+    if (recentOrdersContainer) {
+      if (recentOrders.length === 0) {
+        recentOrdersContainer.innerHTML = `
+          <tr>
+            <td colspan="5" style="text-align: center; padding: 32px; color: var(--color-text-muted);">
+              No hay pedidos registrados
+            </td>
+          </tr>
+        `;
+      } else {
+        recentOrdersContainer.innerHTML = recentOrders.map(order => {
+          let statusClass = 'status-badge--pending';
+          let statusText = 'Pendiente';
+          
+          if (order.status === 'delivered') { statusClass = 'status-badge--delivered'; statusText = 'Entregado'; }
+          else if (order.status === 'processing') { statusClass = 'status-badge--processing'; statusText = 'En proceso'; }
+          else if (order.status === 'shipped') { statusClass = 'status-badge--shipped'; statusText = 'Enviado'; }
+          else if (order.status === 'cancelled') { statusClass = 'status-badge--cancelled'; statusText = 'Cancelado'; }
+
+          return `
+            <tr>
+              <td style="padding: 10px 12px; font-weight: 700;">
+                <a href="#/admin/ventas?id=${order.id}" style="color: var(--color-primary); text-decoration: none;">#${order.id}</a>
+              </td>
+              <td style="padding: 10px 12px; font-weight: 600;">${order.customer || 'Cliente'}</td>
+              <td style="padding: 10px 12px; font-weight: 700; color: var(--color-primary);">${formatCurrency(order.total)}</td>
+              <td style="padding: 10px 12px;">
+                <span class="status-badge ${statusClass}" style="padding: 2px 8px; font-size: 11px;">${statusText}</span>
+              </td>
+              <td style="padding: 10px 12px; text-align: right;">
+                <button class="ready-action-btn" onclick="window.location.hash='/admin/ventas/editar/${order.id}'" style="padding: 2px 8px; font-size: 11px;">Gestionar</button>
+              </td>
+            </tr>
+          `;
+        }).join('');
       }
-    };
-
-    const ctx = document.getElementById('dashboardChart');
-    const titleEl = document.getElementById('dashboard-chart-title');
-    const selectEl = document.getElementById('dashboard-period-select');
-
-    function renderChart(period) {
-      if (dashboardChart) dashboardChart.destroy();
-      
-      const { labels, data, title } = chartData[period];
-      titleEl.innerHTML = `<span class="card__title-icon">${icon('bar-chart-2', 20)}</span> ${title}`;
-
-      // Gradient for bars
-      const gradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, 300);
-      gradient.addColorStop(0, '#2B221C');
-      gradient.addColorStop(1, '#8B7355');
-
-      dashboardChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: labels,
-          datasets: [{
-            label: 'Ventas Totales',
-            data: data,
-            backgroundColor: gradient,
-            borderRadius: 6,
-            barThickness: 'flex',
-            maxBarThickness: 50
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              backgroundColor: '#2A211B',
-              titleFont: { family: 'Inter', size: 13, weight: '600' },
-              bodyFont: { family: 'Inter', size: 14, weight: '700' },
-              padding: 12,
-              cornerRadius: 8,
-              callbacks: {
-                label: function(context) {
-                  return formatCurrency(context.parsed.y);
-                }
-              }
-            }
-          },
-          scales: {
-            x: {
-              grid: { display: false },
-              ticks: { font: { family: 'Inter' } },
-              border: { display: false }
-            },
-            y: {
-              grid: { color: 'rgba(0,0,0,0.05)' },
-              border: { display: false },
-              ticks: {
-                font: { family: 'Inter' },
-                stepSize: 50,
-                callback: function(value) {
-                  return '$' + value;
-                }
-              }
-            }
-          }
-        }
-      });
     }
 
-    // Initial render
-    renderChart('mensual');
-
-    // Handle select changes
-    selectEl.addEventListener('change', (e) => {
-      renderChart(e.target.value);
-    });
+    // ── KOALA READY Overview Init ──
+    try {
+      const readyProducts = await localDb.getAllReadyProductsAdmin();
+      const activeReady = readyProducts.filter(p => p.readyStatus === 'active');
+      const readyCount = activeReady.length;
+      const readySales = await localDb.getReadySalesThisWeek();
+      const announcement = localDb.getActiveAnnouncement();
+      
+      document.getElementById('ready-stat-active').textContent = readyCount;
+      document.getElementById('ready-stat-sales').textContent = formatCurrency(readySales);
+      
+      const statusEl = document.getElementById('ready-overview-status');
+      if (readyCount > 0) {
+        statusEl.textContent = 'Activo';
+        statusEl.className = 'ready-overview__status ready-overview__status--active';
+      } else {
+        statusEl.textContent = 'Sin inventario';
+        statusEl.className = 'ready-overview__status ready-overview__status--inactive';
+      }
+      
+      if (announcement && announcement.active) {
+        document.getElementById('ready-stat-featured').textContent = 'ON';
+      } else {
+        document.getElementById('ready-stat-featured').textContent = 'OFF';
+      }
+      
+      if (readyProducts.length > 0) {
+        const latest = readyProducts[0]; // ordered by id descending
+        document.getElementById('ready-stat-latest').textContent = (latest.brand || latest.name || '—').substring(0, 12);
+      } else {
+        document.getElementById('ready-stat-latest').textContent = '—';
+      }
+    } catch(e) { console.warn('Ready overview load error:', e); }
 
   } catch (error) {
     console.error('Error loading dashboard:', error);

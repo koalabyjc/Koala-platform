@@ -5,6 +5,7 @@
 
 import { icon } from '../../utils/icons.js';
 import { navigationItems, footerNavItems, dashboardData } from '../../data/mockData.js';
+import { readyService } from '../../utils/readyService.js';
 
 export function renderSidebar(activeRoute = '/') {
   const navItemsHTML = navigationItems.map(item => {
@@ -14,6 +15,8 @@ export function renderSidebar(activeRoute = '/') {
     if (!iconHTML && item.id === 'marcas') {
       iconHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/><circle cx="7" cy="7" r="1" fill="currentColor"/></svg>`;
     }
+    const isReadyItem = item.id === 'ready';
+    const badgeHTML = isReadyItem ? `<span class="ready-sidebar-dot" id="ready-sidebar-badge" style="display:none"></span>` : '';
     return `
       <a href="#${item.path}" 
          class="sidebar__nav-item ${isActive ? 'sidebar__nav-item--active' : ''}"
@@ -21,6 +24,7 @@ export function renderSidebar(activeRoute = '/') {
          id="nav-${item.id}">
         <span class="sidebar__nav-icon">${iconHTML}</span>
         <span>${item.label}</span>
+        ${badgeHTML}
       </a>
     `;
   }).join('');
@@ -139,4 +143,18 @@ export function initSidebarMobile() {
       }
     });
   });
+
+  // Initialize KOALA READY badge
+  try {
+    readyService.getReadyCount().then(count => {
+      const badge = document.getElementById('ready-sidebar-badge');
+      if (badge) badge.style.display = count > 0 ? 'inline-block' : 'none';
+    });
+    readyService.subscribe(count => {
+      const badge = document.getElementById('ready-sidebar-badge');
+      if (badge) badge.style.display = count > 0 ? 'inline-block' : 'none';
+    });
+  } catch (e) {
+    console.warn('Error initializing ready sidebar badge:', e);
+  }
 }

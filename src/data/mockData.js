@@ -154,6 +154,7 @@ export const navigationItems = [
   { id: 'productos', label: 'Productos', icon: 'shopping-bag', path: '/admin/productos' },
   { id: 'marcas', label: 'Marcas', icon: 'tag', path: '/admin/marcas' },
   { id: 'ventas', label: 'Ventas', icon: 'bar-chart-2', path: '/admin/ventas' },
+  { id: 'ready', label: 'KOALA READY', icon: 'zap', path: '/admin/ready' },
   { id: 'finanzas', label: 'Finanzas', icon: 'wallet', path: '/admin/finanzas' }
 ];
 

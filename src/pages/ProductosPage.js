@@ -98,7 +98,7 @@ export function renderProductosPage() {
       </div>
 
       <!-- Admin Filters -->
-      <div class="no-scrollbar" style="display:flex; flex-wrap:nowrap; gap:10px; margin-bottom:24px; align-items:center; overflow-x:auto; height:38px; min-height:38px; max-height:38px;" id="admin-filters-bar">
+      <div class="custom-scrollbar" style="display:flex; flex-wrap:nowrap; gap:10px; margin-bottom:24px; align-items:center; overflow-x:auto; padding-bottom:12px; scroll-behavior: smooth;" id="admin-filters-bar">
         <button class="admin-filter-btn active" data-type="all" data-value="" style="flex-shrink:0;">Todos</button>
         <span style="width:1px; height:20px; background:var(--color-neutral-divider); flex-shrink:0;" id="cat-separator"></span>
         <span style="width:1px; height:20px; background:var(--color-neutral-divider); flex-shrink:0;" id="brand-separator"></span>
@@ -232,6 +232,20 @@ export function renderProductosPage() {
       .admin-filter-btn.active .count-badge {
         background: rgba(255,255,255,0.3);
       }
+      .custom-scrollbar::-webkit-scrollbar {
+        height: 6px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: var(--color-bg-surface); 
+        border-radius: 4px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: var(--color-neutral-border); 
+        border-radius: 4px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: var(--color-primary); 
+      }
     </style>
   `;
 }
@@ -251,9 +265,9 @@ export async function initProductosPage() {
         await localDb.saveProduct(product);
 
         if (product.brand) {
-          const brandExists = allBrands.find(b => b.name.toLowerCase() === product.brand.toLowerCase());
+          const brandExists = allBrands.find(b => b.name && b.name.toLowerCase() === product.brand.toLowerCase());
           if (!brandExists) {
-            const newBrand = { id: 'B' + Date.now() + Math.random().toString(36).slice(2,5), name: product.brand, logo: product.brand.substring(0, 2).toUpperCase() };
+            const newBrand = { id: 'B' + Date.now() + Math.random().toString(36).slice(2,5), name: product.brand };
             await localDb.saveBrand(newBrand);
             allBrands.push(newBrand);
           }
@@ -435,9 +449,10 @@ function setupEditModal() {
         if (!existingBrand) {
           await localDb.saveBrand({
             id: 'B' + Date.now(),
-            name: newBrand,
-            logo: newBrand.substring(0, 2).toUpperCase()
+            name: newBrand
           });
+        } else {
+          product.brand = existingBrand.name;
         }
       }
 

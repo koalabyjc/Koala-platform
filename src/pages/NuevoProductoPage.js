@@ -449,13 +449,14 @@ export async function initNuevoProductoPage() {
       }
 
       // Auto-create brand if it's completely new
-      const existingBrand = allBrands.find(b => b.name.toLowerCase() === brand.toLowerCase());
+      const existingBrand = allBrands.find(b => b.name && b.name.toLowerCase() === brand.toLowerCase());
       if (!existingBrand && brand.trim() !== '') {
          localDb.saveBrand({
             id: 'B' + Date.now(),
-            name: brand,
-            logo: brand.substring(0, 2).toUpperCase()
+            name: brand
          }).catch(err => console.error('Error auto-saving brand', err));
+      } else if (existingBrand) {
+         newProduct.brand = existingBrand.name;
       }
 
       // Add to IndexedDB

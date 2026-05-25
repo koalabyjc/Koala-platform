@@ -19,7 +19,8 @@ class SupabaseDB {
       return [];
     }
     // Parse sizes from JSON array if it was stored as string, but Supabase handles TEXT[] as JS arrays
-    return data || [];
+    // Filter out KOALA READY products (whose status starts with 'ready::') from the standard made-to-order catalog
+    return (data || []).filter(p => !p.status || !p.status.startsWith('ready::'));
   }
 
   async saveProduct(product) {
@@ -42,6 +43,25 @@ class SupabaseDB {
 
   async getTop5Products() {
     const products = await this.getAllProducts();
+    
+    // Check manual override
+    try {
+      const manualIds = JSON.parse(localStorage.getItem('koala_top_products'));
+      if (manualIds && Array.isArray(manualIds) && manualIds.length > 0) {
+         const manualProducts = manualIds.map(id => products.find(p => p.id === id)).filter(Boolean);
+         // If we found any valid products, pad with auto-calculated if less than 5, or just return them
+         if (manualProducts.length > 0) {
+           const manualSet = new Set(manualProducts.map(p => p.id));
+           let autoProducts = products.filter(p => p.status !== 'draft' && !manualSet.has(p.id)).sort((a, b) => {
+             const scoreA = (a.price || 0) + ((a.name || '').length * 2);
+             const scoreB = (b.price || 0) + ((b.name || '').length * 2);
+             return scoreB - scoreA;
+           });
+           return [...manualProducts, ...autoProducts].slice(0, 5);
+         }
+      }
+    } catch(e) {}
+
     return products
       .filter(p => p.status !== 'draft')
       .sort((a, b) => {
@@ -50,6 +70,10 @@ class SupabaseDB {
         return scoreB - scoreA;
       })
       .slice(0, 5);
+  }
+
+  async saveTop5Products(idsArray) {
+    localStorage.setItem('koala_top_products', JSON.stringify(idsArray));
   }
 
   // --- ORDERS ---
@@ -292,7 +316,11 @@ class SupabaseDB {
   }
 
   async saveBrand(brand) {
-    const { data, error } = await supabase.from('brands').upsert(brand).select();
+    const payload = {
+      id: brand.id,
+      name: brand.name
+    };
+    const { data, error } = await supabase.from('brands').upsert(payload).select();
     if (error) throw error;
     return data?.[0] || brand;
   }
@@ -301,6 +329,182 @@ class SupabaseDB {
     const { error } = await supabase.from('brands').delete().eq('id', id);
     if (error) throw error;
     return true;
+  }
+
+  // ── KOALA READY Methods ──
+
+  async getAllReadyProducts(limit = 100) {
+    let query = supabase.from('products').select('*').order('id', { ascending: false });
+    if (limit) query = query.limit(limit);
+    const { data, error } = await query;
+    if (error) { console.error('Error fetching ready products:', error); return []; }
+    
+    return (data || [])
+      .filter(p => p.status && p.status.startsWith('ready::'))
+      .map(p => this._unpackReadyProduct(p))
+      .filter(p => p.readyStatus === 'active');
+  }
+
+  async getAllReadyProductsAdmin(limit = 100) {
+    let query = supabase.from('products').select('*').order('id', { ascending: false });
+    if (limit) query = query.limit(limit);
+    const { data, error } = await query;
+    if (error) { console.error('Error fetching ready products admin:', error); return []; }
+    
+    return (data || [])
+      .filter(p => p.status && p.status.startsWith('ready::'))
+      .map(p => this._unpackReadyProduct(p));
+  }
+
+  _unpackReadyProduct(product) {
+    if (!product.status || !product.status.startsWith('ready::')) {
+      return {
+        ...product,
+        inventoryType: 'made_to_order',
+        readyStatus: 'hidden',
+        readyBadge: 'READY NOW',
+        readyQuantity: 1,
+        isFeatured: false
+      };
+    }
+    const parts = product.status.split('::');
+    // ready::{readyStatus}::{readyBadge}::{readyQuantity}::{isFeatured}
+    return {
+      ...product,
+      inventoryType: 'ready_now',
+      readyStatus: parts[1] || 'active',
+      readyBadge: parts[2] || 'READY NOW',
+      readyQuantity: parseInt(parts[3] || '1', 10),
+      isFeatured: parts[4] === 'true'
+    };
+  }
+
+  _packReadyStatus(readyStatus, readyBadge, readyQuantity, isFeatured) {
+    return `ready::${readyStatus || 'active'}::${readyBadge || 'READY NOW'}::${readyQuantity || 1}::${isFeatured || false}`;
+  }
+
+  async saveReadyProduct(product) {
+    const statusField = this._packReadyStatus(
+      product.readyStatus,
+      product.readyBadge,
+      product.readyQuantity,
+      product.isFeatured
+    );
+
+    // Make sure id starts with R if new
+    const record = {
+      id: product.id || 'R' + Math.floor(Math.random() * 9000 + 1000),
+      name: product.name,
+      price: parseFloat(product.price || 0),
+      brand: product.brand || '',
+      department: product.department || '',
+      category: product.category || '',
+      sizes: Array.isArray(product.sizes) ? product.sizes : [product.sizes || ''],
+      image: product.image || '',
+      status: statusField
+    };
+
+    const { data, error } = await supabase.from('products').upsert(record).select();
+    if (error) {
+      console.error('Error saving ready product:', error);
+      throw error;
+    }
+    return this._unpackReadyProduct(data?.[0] || record);
+  }
+
+  async markReadySold(id) {
+    const { data, error } = await supabase.from('products').select('*').eq('id', id).single();
+    if (data) {
+      const unpacked = this._unpackReadyProduct(data);
+      unpacked.readyStatus = 'sold';
+      unpacked.readyQuantity = 0;
+      const statusField = this._packReadyStatus(
+        unpacked.readyStatus,
+        unpacked.readyBadge,
+        unpacked.readyQuantity,
+        unpacked.isFeatured
+      );
+      await supabase.from('products').update({ status: statusField }).eq('id', id);
+    }
+  }
+
+  async toggleReadyFeatured(id) {
+    const { data } = await supabase.from('products').select('*').eq('id', id).single();
+    if (data) {
+      const unpacked = this._unpackReadyProduct(data);
+      unpacked.isFeatured = !unpacked.isFeatured;
+      const statusField = this._packReadyStatus(
+        unpacked.readyStatus,
+        unpacked.readyBadge,
+        unpacked.readyQuantity,
+        unpacked.isFeatured
+      );
+      await supabase.from('products').update({ status: statusField }).eq('id', id);
+      return unpacked.isFeatured;
+    }
+    return false;
+  }
+
+  async updateReadyStatus(id, status) {
+    const { data } = await supabase.from('products').select('*').eq('id', id).single();
+    if (data) {
+      const unpacked = this._unpackReadyProduct(data);
+      unpacked.readyStatus = status;
+      const statusField = this._packReadyStatus(
+        unpacked.readyStatus,
+        unpacked.readyBadge,
+        unpacked.readyQuantity,
+        unpacked.isFeatured
+      );
+      await supabase.from('products').update({ status: statusField }).eq('id', id);
+    }
+  }
+
+  async deleteReadyProduct(id) {
+    await this.deleteProduct(id);
+  }
+
+  async getReadySalesThisWeek() {
+    // Calculate from orders that contain ready products
+    const orders = await this.getAllOrders(200);
+    const now = new Date();
+    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    let total = 0;
+    orders.forEach(order => {
+      const orderDate = new Date(order.date || order.created_at);
+      if (orderDate >= weekAgo && order.itemslist && Array.isArray(order.itemslist)) {
+        const hasReady = order.itemslist.some(item => item.inventoryType === 'ready_now' || (item.name && item.name.includes('(READY)')));
+        if (hasReady) {
+          total += parseFloat(order.total || 0);
+        }
+      }
+    });
+    return total;
+  }
+
+  // ── Announcement Methods ──
+  getActiveAnnouncement() {
+    try {
+      const data = localStorage.getItem('koala_ready_announcement');
+      if (!data) return null;
+      const announcement = JSON.parse(data);
+      return announcement.active ? announcement : null;
+    } catch(e) { return null; }
+  }
+
+  saveAnnouncement(announcement) {
+    localStorage.setItem('koala_ready_announcement', JSON.stringify({ ...announcement, active: true }));
+  }
+
+  clearAnnouncement() {
+    try {
+      const data = localStorage.getItem('koala_ready_announcement');
+      if (data) {
+        const announcement = JSON.parse(data);
+        announcement.active = false;
+        localStorage.setItem('koala_ready_announcement', JSON.stringify(announcement));
+      }
+    } catch(e) {}
   }
 }
 

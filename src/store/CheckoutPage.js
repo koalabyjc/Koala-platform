@@ -71,20 +71,57 @@ export function renderCheckoutPage() {
       <div class="checkout-summary">
         <h2 class="checkout-section-title">Resumen de Orden</h2>
         <div class="cart-items">
-          ${items.map(item => `
-            <div class="cart-item">
-              <div class="cart-item__img">${item.image}</div>
-              <div class="cart-item__info">
-                <div class="cart-item__title">${item.name}</div>
-                ${item.brand ? `<div style="font-size:11px; color:var(--color-text-muted); text-transform:uppercase; font-weight:600;">${item.brand}</div>` : ''}
-                <div class="cart-item__qty">
-                  Cant: ${item.quantity}
-                  ${item.selectedSize ? ` · Talla: <strong>${item.selectedSize}</strong>` : ''}
+          ${items.map(item => {
+            const sizeLabel = item.selectedSize || '';
+            const isCustomImg = item.image && item.image.length > 10;
+            let imgHtml = '';
+            
+            if (isCustomImg) {
+              if (item.image.trim().startsWith('<img')) {
+                // If it's already an HTML image tag, render it directly
+                imgHtml = item.image;
+              } else {
+                // If it's a raw URL or base64 string, wrap it in an img tag
+                imgHtml = `<img src="${item.image}" style="width:100%; height:100%; object-fit:cover; border-radius:8px;" />`;
+              }
+            } else {
+              // Fallback to emoji or placeholder
+              imgHtml = `<div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; background:rgba(198,162,122,0.1); font-size:24px;">${item.image || '🛍️'}</div>`;
+            }
+
+            return `
+              <div class="cart-item" style="position:relative; display:flex; align-items:center; gap:12px; padding:16px; background:var(--color-bg-elevated); border:1px solid var(--color-neutral-border); border-radius:12px; margin-bottom:12px; box-sizing:border-box;">
+                <!-- Thumbnail -->
+                <div class="cart-item__img" style="width:50px; height:50px; border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0; overflow:hidden;">
+                  ${imgHtml}
+                </div>
+                
+                <!-- Info -->
+                <div class="cart-item__info" style="flex:1; display:flex; flex-direction:column; gap:2px; min-width:0;">
+                  <div class="cart-item__title" style="font-weight:600; font-size:13px; color:var(--color-text-primary); line-height:1.3; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${item.name}</div>
+                  ${item.brand ? `<div style="font-size:10px; color:var(--color-accent); text-transform:uppercase; font-weight:700; letter-spacing:0.5px;">${item.brand}</div>` : ''}
+                  
+                  <!-- Quantity adjuster + Size -->
+                  <div style="display:flex; align-items:center; gap:12px; margin-top:4px; flex-wrap:wrap;">
+                    <div style="display:flex; align-items:center; background:var(--color-bg-surface); border:1px solid var(--color-neutral-border); border-radius:6px; padding:2px;">
+                      <button class="cart-qty-btn--minus" data-id="${item.id}" data-size="${sizeLabel}" data-qty="${item.quantity}" style="background:none; border:none; width:22px; height:22px; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:bold; color:var(--color-text-secondary); cursor:pointer; padding:0;">-</button>
+                      <span style="font-size:12px; font-weight:700; width:24px; text-align:center; color:var(--color-primary);">${item.quantity}</span>
+                      <button class="cart-qty-btn--plus" data-id="${item.id}" data-size="${sizeLabel}" data-qty="${item.quantity}" style="background:none; border:none; width:22px; height:22px; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:bold; color:var(--color-text-secondary); cursor:pointer; padding:0;">+</button>
+                    </div>
+                    ${sizeLabel ? `<span style="font-size:11px; color:var(--color-text-secondary);">Talla: <strong style="color:var(--color-primary);">${sizeLabel}</strong></span>` : ''}
+                  </div>
+                </div>
+
+                <!-- Price + Remove Button -->
+                <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px; justify-content:space-between; min-height:48px;">
+                  <button class="cart-item-remove-btn" data-id="${item.id}" data-size="${sizeLabel}" style="background:none; border:none; color:var(--color-ready-accent); cursor:pointer; padding:4px; border-radius:4px; display:flex; align-items:center; justify-content:center; transition:background var(--duration-fast);" onmouseover="this.style.background='rgba(229,62,62,0.08)'" onmouseout="this.style.background='none'">
+                    ${icon('trash', 16) || '✕'}
+                  </button>
+                  <div class="cart-item__price" style="font-weight:700; color:var(--color-primary); font-size:14px;">${formatCurrency(item.price * item.quantity)}</div>
                 </div>
               </div>
-              <div class="cart-item__price">${formatCurrency(item.price * item.quantity)}</div>
-            </div>
-          `).join('')}
+            `;
+          }).join('')}
         </div>
         
         <div style="margin-top: 24px;">
@@ -242,5 +279,57 @@ window.processKoalaOrder = async () => {
 };
 
 export function initCheckoutPage() {
-  // Logic migrated to window.processKoalaOrder to ensure it is always attached.
+  // Subscribe to cart updates to dynamically re-render the page when quantity or items change
+  const unsubscribe = cartService.subscribe(() => {
+    const contentArea = document.getElementById('content-area');
+    const hash = window.location.hash || '#/';
+    if (contentArea && hash.startsWith('#/cart')) {
+      contentArea.innerHTML = renderCheckoutPage();
+      bindCartActions();
+    }
+  });
+
+  // Store unsubscribe on global window to clean up on route change
+  window.__currentCheckoutUnsubscribe = unsubscribe;
+
+  bindCartActions();
+}
+
+function bindCartActions() {
+  // Decrement qty
+  document.querySelectorAll('.cart-qty-btn--minus').forEach(btn => {
+    btn.onclick = () => {
+      const id = btn.getAttribute('data-id');
+      const size = btn.getAttribute('data-size') || '';
+      const qty = parseInt(btn.getAttribute('data-qty'), 10);
+      if (qty > 1) {
+        cartService.updateQuantity(id, size, qty - 1);
+      } else {
+        if (confirm('¿Quieres eliminar este artículo de tu carrito?')) {
+          cartService.removeItem(id, size);
+        }
+      }
+    };
+  });
+
+  // Increment qty
+  document.querySelectorAll('.cart-qty-btn--plus').forEach(btn => {
+    btn.onclick = () => {
+      const id = btn.getAttribute('data-id');
+      const size = btn.getAttribute('data-size') || '';
+      const qty = parseInt(btn.getAttribute('data-qty'), 10);
+      cartService.updateQuantity(id, size, qty + 1);
+    };
+  });
+
+  // Remove item entirely
+  document.querySelectorAll('.cart-item-remove-btn').forEach(btn => {
+    btn.onclick = () => {
+      if (confirm('¿Quieres quitar este artículo del carrito?')) {
+        const id = btn.getAttribute('data-id');
+        const size = btn.getAttribute('data-size') || '';
+        cartService.removeItem(id, size);
+      }
+    };
+  });
 }

@@ -7,8 +7,12 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function test() {
   const { data, error } = await supabase.from('products').select('*').limit(1);
-  console.log('Data:', data);
-  console.log('Error:', error);
+  if (data && data.length > 0) {
+    console.log('Product columns:', Object.keys(data[0]));
+    console.log('Sample product:', data[0]);
+  } else {
+    console.log('No products found or error:', error);
+  }
 }
 
 test();

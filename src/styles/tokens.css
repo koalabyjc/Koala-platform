@@ -142,4 +142,15 @@
   --topbar-height: 72px;
   --content-max-width: 1400px;
   --content-padding: var(--space-6);
+
+  /* ── KOALA READY Tokens ── */
+  --color-ready-accent: #E53E3E;
+  --color-ready-badge-bg: #1A1A2E;
+  --color-ready-badge-text: #FFFFFF;
+  --color-ready-success: #38A169;
+  --color-ready-warning: #D69E2E;
+  --color-ready-sold: #A0AEC0;
+  --color-ready-glow: rgba(229, 62, 62, 0.3);
+  --color-ready-banner-bg: #1A1A2E;
+  --color-ready-banner-text: #F7F7F7;
 }

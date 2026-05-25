@@ -37,11 +37,14 @@ import { renderFinanzasPage, initFinanzasPage } from './pages/FinanzasPage.js';
 import { renderPlaceholderPage } from './pages/PlaceholderPage.js';
 import { renderLoginPage, initLoginPage } from './pages/LoginPage.js';
 import { renderConfiguracionPage, initConfiguracionPage } from './pages/ConfiguracionPage.js';
+import { renderKoalaReadyPage, initKoalaReadyPage } from './pages/KoalaReadyPage.js';
 
 /* Pages (Store) */
 import { renderHomePage, initHomePage } from './store/HomePage.js';
 import { renderProductPage, initProductPage } from './store/ProductPage.js';
 import { renderCheckoutPage, initCheckoutPage } from './store/CheckoutPage.js';
+import { renderReadyPage, initReadyPage } from './store/ReadyPage.js';
+import { initAnnouncements } from './store/ReadyAnnouncement.js';
 
 /* Utilities */
 import { Router } from './utils/router.js';
@@ -144,6 +147,7 @@ class KoalaApp {
 
     this.contentContainer = document.getElementById('content-area');
     initStoreShell();
+    initAnnouncements();
   }
 
   /**
@@ -159,6 +163,9 @@ class KoalaApp {
     });
     this.router.register('/cart', () => {
       this.renderPage(renderCheckoutPage(), () => initCheckoutPage());
+    });
+    this.router.register('/ready', () => {
+      this.renderPage(renderReadyPage(), () => initReadyPage());
     });
 
     /* AUTH ROUTES */
@@ -190,6 +197,9 @@ class KoalaApp {
     });
     this.router.register('/admin/finanzas', () => {
       this.renderPage(renderFinanzasPage(), () => initFinanzasPage());
+    });
+    this.router.register('/admin/ready', () => {
+      this.renderPage(renderKoalaReadyPage(), () => initKoalaReadyPage());
     });
 
     this.router.register('/admin/configuracion', () => {

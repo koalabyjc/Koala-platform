@@ -39,8 +39,13 @@ export function renderEditarPedidoPage(params) {
           </div>
           
           <div style="margin-top: 16px; display: flex; justify-content: space-between; align-items: center; font-size: 14px;">
-            <span>Envío:</span>
-            <input type="number" id="edit-order-shipping" class="auth-input" style="width: 80px; text-align: right;" min="0" step="0.01" />
+            <span>Envío ($):</span>
+            <input type="number" id="edit-order-shipping" class="auth-input" style="width: 100px; text-align: right;" min="0" step="0.01" />
+          </div>
+          
+          <div style="margin-top: 12px; display: flex; justify-content: space-between; align-items: center; font-size: 14px;">
+            <span>Fecha Límite:</span>
+            <input type="date" id="edit-order-duedate" class="auth-input" style="width: 150px; padding: 4px 8px; border-radius: 6px;" />
           </div>
           
           <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--color-neutral-divider); display: flex; justify-content: space-between; font-size: 18px; font-weight: bold;">
@@ -122,6 +127,31 @@ export async function initEditarPedidoPage(params) {
       currentOrder.shippingCost = val;
       renderCurrentItems(); // to trigger financial recalculation
     });
+
+    const dueDateInput = document.getElementById('edit-order-duedate');
+    if (dueDateInput) {
+      if (currentOrder.dueDate) {
+        try {
+          const dateObj = new Date(currentOrder.dueDate);
+          if (!isNaN(dateObj.getTime())) {
+            const yyyy = dateObj.getFullYear();
+            const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const dd = String(dateObj.getDate()).padStart(2, '0');
+            dueDateInput.value = `${yyyy}-${mm}-${dd}`;
+          }
+        } catch (e) {}
+      }
+
+      dueDateInput.addEventListener('change', (e) => {
+        const val = e.target.value;
+        if (val) {
+          currentOrder.dueDate = new Date(val + 'T12:00:00').toISOString();
+        } else {
+          currentOrder.dueDate = null;
+        }
+        renderCurrentItems();
+      });
+    }
     
     // Add Payment Logic
     document.getElementById('btn-add-payment').addEventListener('click', () => {
@@ -294,22 +324,36 @@ function renderInventory(filter = '') {
     return;
   }
 
-  list.innerHTML = filtered.map(p => `
-    <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--color-bg-main); border-radius: var(--radius-md); border: 1px solid var(--color-neutral-border);">
-      <div style="display:flex; align-items:center; gap:8px;">
-        <div style="width: 32px; height: 32px; border-radius: 4px; overflow: hidden; background: #eee; display:flex; align-items:center; justify-content:center; font-size:16px;">
-          ${p.image}
+  list.innerHTML = filtered.map(p => {
+    const hasCustomImg = p.image && p.image.length > 10;
+    let imgHtml = '';
+    if (hasCustomImg) {
+      if (p.image.trim().startsWith('<img')) {
+        imgHtml = p.image.replace(/style="[^"]*"/g, 'style="width:100%; height:100%; object-fit:cover;"');
+      } else {
+        imgHtml = `<img src="${p.image}" style="width:100%; height:100%; object-fit:cover;" />`;
+      }
+    } else {
+      imgHtml = p.image || '🛍️';
+    }
+
+    return `
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--color-bg-main); border-radius: var(--radius-md); border: 1px solid var(--color-neutral-border);">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <div style="width: 32px; height: 32px; border-radius: 4px; overflow: hidden; background: #eee; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0;">
+            ${imgHtml}
+          </div>
+          <div>
+            <div style="font-weight: 600; font-size: 14px;">${p.name}</div>
+            <div style="font-size: 12px; color: var(--color-text-secondary);">${formatCurrency(p.price)}</div>
+          </div>
         </div>
-        <div>
-          <div style="font-weight: 600; font-size: 14px;">${p.name}</div>
-          <div style="font-size: 12px; color: var(--color-text-secondary);">${formatCurrency(p.price)}</div>
-        </div>
+        <button class="btn btn--outline add-to-order-btn" data-id="${p.id}" style="padding: 4px 8px;">
+          ${icon('plus', 14)} Añadir
+        </button>
       </div>
-      <button class="btn btn--outline add-to-order-btn" data-id="${p.id}" style="padding: 4px 8px;">
-        ${icon('plus', 14)} Añadir
-      </button>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 
   list.querySelectorAll('.add-to-order-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {

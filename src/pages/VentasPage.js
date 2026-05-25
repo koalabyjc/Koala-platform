@@ -100,6 +100,13 @@ export function renderVentasPage() {
                 <input type="number" id="edit-order-total" class="auth-input" style="width:100%" step="0.01" min="0" />
               </div>
             </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+              <div class="form-group">
+                <label style="display:block; margin-bottom:8px; font-size:12px; font-weight:600;">Fecha Límite</label>
+                <input type="date" id="edit-order-duedate" class="auth-input" style="width:100%" />
+              </div>
+              <div class="form-group"></div>
+            </div>
             <div style="margin-bottom: 16px; padding: 12px; background: var(--color-bg-surface); border-radius: 8px; display:flex; align-items:center; justify-content:space-between;">
               <div>
                 <span style="font-size: 12px; font-weight: 600; color: var(--color-text-secondary);">Artículos del pedido</span>
@@ -286,6 +293,27 @@ export async function initVentasPage() {
             const exists = Array.from(paymentSelect.options).some(o => o.value === order.paymentMethod);
             if (exists) paymentSelect.value = order.paymentMethod;
           }
+
+          const dueDateInput = document.getElementById('edit-order-duedate');
+          if (dueDateInput) {
+            if (order.dueDate) {
+              try {
+                const dateObj = new Date(order.dueDate);
+                if (!isNaN(dateObj.getTime())) {
+                  const yyyy = dateObj.getFullYear();
+                  const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+                  const dd = String(dateObj.getDate()).padStart(2, '0');
+                  dueDateInput.value = `${yyyy}-${mm}-${dd}`;
+                } else {
+                  dueDateInput.value = '';
+                }
+              } catch (e) {
+                dueDateInput.value = '';
+              }
+            } else {
+              dueDateInput.value = '';
+            }
+          }
           
           const itemsCount = document.getElementById('edit-order-items-count');
           if (itemsCount) {
@@ -327,6 +355,7 @@ export async function initVentasPage() {
           const newStatus = document.getElementById('edit-order-status').value;
           const newPayment = document.getElementById('edit-order-payment').value;
           const newTotal = parseFloat(document.getElementById('edit-order-total').value);
+          const newDueDate = document.getElementById('edit-order-duedate').value;
           
           const order = orders.find(o => String(o.id) === String(id));
           if (order) {
@@ -335,7 +364,14 @@ export async function initVentasPage() {
             order.paymentMethod = newPayment;
             if (!isNaN(newTotal)) order.total = newTotal;
             
-            await localDb.saveOrder(order);
+            if (newDueDate) {
+              order.dueDate = new Date(newDueDate + 'T12:00:00').toISOString();
+            } else {
+              order.dueDate = null;
+            }
+            
+            const updatedOrder = updateOrderFinancials(order);
+            await localDb.saveOrder(updatedOrder);
             
             // Triggers para automatización (Email/SMS/Webhook)
             if (newStatus === 'shipped') {
@@ -401,11 +437,22 @@ export async function initVentasPage() {
           let itemsHtml = order.itemsList.map(item => {
             // Find product image from DB if possible
             const productMatch = products.find(p => p.id === item.id || p.name === item.name);
-            const imageHtml = (item.image && item.image.length > 10)
+            const rawImage = (item.image && item.image.length > 10)
               ? item.image
               : productMatch 
                 ? productMatch.image 
-                : `<div style="width:100%; height:100%; background:#eee; display:flex; align-items:center; justify-content:center; color:#999;">${icon('image', 16)}</div>`;
+                : '';
+
+            let imageHtml = '';
+            if (rawImage && rawImage.length > 10) {
+              if (rawImage.trim().startsWith('<img')) {
+                imageHtml = rawImage.replace(/style="[^"]*"/g, 'style="width:100%; height:100%; object-fit:cover;"');
+              } else {
+                imageHtml = `<img src="${rawImage}" style="width:100%; height:100%; object-fit:cover;" />`;
+              }
+            } else {
+              imageHtml = `<div style="width:100%; height:100%; background:#eee; display:flex; align-items:center; justify-content:center; color:#999;">${icon('image', 16)}</div>`;
+            }
 
             const brandLine = item.brand ? `<span style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--color-text-muted);">${item.brand}</span>` : '';
             const sizeLine = item.selectedSize ? ` · Talla: <strong>${item.selectedSize}</strong>` : '';
