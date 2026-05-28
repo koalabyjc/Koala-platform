@@ -42,10 +42,12 @@ export function formatPercent(value) {
  * Format relative time (e.g., "Hoy", "2 días", "3 días")
  */
 export function formatRelativeTime(dateInput) {
+  if (!dateInput) return 'Sin compras';
   const date = new Date(dateInput);
   
   if (isNaN(date.getTime())) {
     const daysAgo = Number(dateInput);
+    if (isNaN(daysAgo)) return 'Sin compras';
     if (daysAgo === 0) return 'Hoy';
     if (daysAgo === 1) return '1 día';
     return `${daysAgo} días`;

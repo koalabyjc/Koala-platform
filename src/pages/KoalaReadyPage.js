@@ -7,6 +7,7 @@ import { icon } from '../utils/icons.js';
 import { formatCurrency } from '../utils/formatters.js';
 import { localDb } from '../utils/localDb.js';
 import { readyService } from '../utils/readyService.js';
+import { compressImage } from '../utils/imageCompressor.js';
 
 let readyProducts = [];
 let editingProduct = null;
@@ -291,13 +292,12 @@ export async function initKoalaReadyPage() {
       }
     };
 
-    fileInput.onchange = (e) => {
+    fileInput.onchange = async (e) => {
       const file = e.target.files[0];
       if (!file) return;
 
-      const reader = new FileReader();
-      reader.onload = () => {
-        selectedImageBase64 = reader.result;
+      try {
+        selectedImageBase64 = await compressImage(file);
         
         // Show preview
         const placeholder = document.getElementById('ready-upload-placeholder');
@@ -310,21 +310,22 @@ export async function initKoalaReadyPage() {
         img.className = 'ready-form__image-preview';
         img.src = selectedImageBase64;
         uploader.appendChild(img);
-      };
-      reader.readAsDataURL(file);
+      } catch (err) {
+        console.error(err);
+        alert('Error procesando la imagen');
+      }
     };
 
     // Drag & Drop
     uploader.ondragover = (e) => { e.preventDefault(); uploader.style.borderColor = 'var(--color-primary)'; };
     uploader.ondragleave = () => { uploader.style.borderColor = 'var(--color-neutral-border)'; };
-    uploader.ondrop = (e) => {
+    uploader.ondrop = async (e) => {
       e.preventDefault();
       uploader.style.borderColor = 'var(--color-neutral-border)';
       const file = e.dataTransfer.files[0];
       if (file && file.type.startsWith('image/')) {
-        const reader = new FileReader();
-        reader.onload = () => {
-          selectedImageBase64 = reader.result;
+        try {
+          selectedImageBase64 = await compressImage(file);
           
           const placeholder = document.getElementById('ready-upload-placeholder');
           placeholder.style.display = 'none';
@@ -336,8 +337,9 @@ export async function initKoalaReadyPage() {
           img.className = 'ready-form__image-preview';
           img.src = selectedImageBase64;
           uploader.appendChild(img);
-        };
-        reader.readAsDataURL(file);
+        } catch (err) {
+          console.error(err);
+        }
       }
     };
   }

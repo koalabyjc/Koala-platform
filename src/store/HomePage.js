@@ -237,8 +237,8 @@ function renderFilteredProducts() {
     }
   }
 
-  // Show all products except draft
-  filtered = filtered.filter(p => p.status !== 'draft');
+  // Show all products except draft and hidden
+  filtered = filtered.filter(p => p.status !== 'draft' && p.status !== 'hidden');
 
   if (filtered.length === 0) {
     container.innerHTML = `

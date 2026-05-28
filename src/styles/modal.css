@@ -1,5 +1,6 @@
 /* ============================================
    KOALA — Modal Styles
+   Modern Mobile-First Responsive Overlay System
    ============================================ */
 
 .modal-overlay {
@@ -8,6 +9,7 @@
   left: 0;
   width: 100vw;
   height: 100vh;
+  height: 100dvh; /* Dynamic viewport height to account for mobile browsers' chrome/address bars */
   background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(4px);
   z-index: var(--z-modal);
@@ -34,6 +36,19 @@
   transform: translateY(20px) scale(0.95);
   transition: all var(--duration-normal) var(--ease-smooth);
   border: 1px solid var(--color-neutral-divider);
+  box-sizing: border-box;
+  
+  /* Layout structure for modern internal scrollability */
+  display: flex;
+  flex-direction: column;
+  max-height: 85vh;
+  max-height: 85dvh; /* Dynamic viewport height safe limit */
+  overflow: hidden; /* Outward overflow locked; delegates scrolling to .modal__body */
+}
+
+/* Modals that display rich invoice contents (larger widths) */
+.modal--order-view {
+  max-width: 500px;
 }
 
 .modal-overlay.active .modal {
@@ -45,6 +60,7 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: var(--space-4);
+  flex-shrink: 0; /* Header never shrinks */
 }
 
 .modal__title {
@@ -66,9 +82,164 @@
   color: var(--color-text-primary);
 }
 
+/* Dedicated scrollable modal body area */
+.modal__body {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding-right: 4px; /* Space for elegant scrollbar */
+  margin-bottom: var(--space-4);
+  -webkit-overflow-scrolling: touch; /* Butter-smooth iOS momentum scrolling */
+}
+
+/* Standard edit forms layout grid */
+.modal-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
 .modal__footer {
   margin-top: var(--space-6);
   display: flex;
   justify-content: flex-end;
   gap: var(--space-3);
+  flex-shrink: 0; /* Footer never shrinks */
+}
+
+/* Invoice footer layout - handles multiple buttons beautifully */
+.modal__footer--invoice {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: var(--space-6);
+  flex-shrink: 0;
+}
+
+.btn--whatsapp {
+  color: #25D366;
+  border-color: #25D366;
+  background: transparent;
+  flex: 1 1 auto;
+  justify-content: center;
+  min-width: 160px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn--whatsapp:hover {
+  background: rgba(37, 211, 102, 0.05) !important;
+}
+
+.modal__footer-actions {
+  display: flex;
+  gap: 8px;
+  flex: 1 1 auto;
+  justify-content: flex-end;
+  min-width: 140px;
+}
+
+.modal__footer-actions .btn {
+  flex: 1;
+  justify-content: center;
+  display: flex;
+  align-items: center;
+}
+
+/* Thin premium scrollbar inside modals */
+.modal__body::-webkit-scrollbar,
+.modal::-webkit-scrollbar {
+  width: 5px;
+}
+
+.modal__body::-webkit-scrollbar-track,
+.modal::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modal__body::-webkit-scrollbar-thumb,
+.modal::-webkit-scrollbar-thumb {
+  background: rgba(74, 55, 40, 0.15);
+  border-radius: var(--radius-full);
+}
+
+.modal__body::-webkit-scrollbar-thumb:hover,
+.modal::-webkit-scrollbar-thumb:hover {
+  background: rgba(74, 55, 40, 0.3);
+}
+
+/* ==========================================================================
+   MOBILE RESPONSIVE ADAPTATIONS: Luxury Bottom Sheets & Stacked Layouts
+   ========================================================================== */
+@media (max-width: 768px) {
+  .modal-overlay {
+    align-items: flex-end; /* Slides up from bottom */
+    padding: 0;
+  }
+  
+  .modal {
+    width: 100%;
+    max-width: 100%;
+    max-height: 82dvh; /* Avoid taking 100% height, leaves space at the top to dismiss */
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    margin: 0;
+    padding: var(--space-5) var(--space-5) calc(var(--space-5) + env(safe-area-inset-bottom, 16px)) var(--space-5);
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    transform: translateY(100%) scale(1);
+    transition: transform var(--duration-normal) cubic-bezier(0.32, 0.94, 0.6, 1);
+  }
+  
+  .modal-overlay.active .modal {
+    transform: translateY(0) scale(1);
+  }
+  
+  /* Stacked standard footer buttons: Action on top, cancel below */
+  .modal__footer {
+    flex-direction: column-reverse;
+    width: 100%;
+    gap: var(--space-2);
+  }
+  
+  .modal__footer .btn {
+    width: 100%;
+    justify-content: center;
+    min-height: 42px;
+  }
+
+  /* Invoice Footer mobile stack */
+  .modal__footer--invoice {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    gap: var(--space-3);
+  }
+  
+  .btn--whatsapp {
+    width: 100%;
+    min-height: 44px;
+    order: 1; /* WhatsApp at the top of the stack */
+  }
+  
+  .modal__footer-actions {
+    width: 100%;
+    display: flex;
+    gap: var(--space-2);
+    order: 2; /* Adjust and Close buttons placed horizontally underneath */
+  }
+  
+  .modal__footer-actions .btn {
+    min-height: 44px;
+  }
+  
+  /* Fluid forms: stack grid fields on mobile */
+  .modal-form-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
 }

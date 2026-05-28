@@ -63,58 +63,60 @@ export function renderVentasPage() {
             <h2 class="modal__title">Editar Pedido</h2>
             <button class="modal__close" id="close-edit-order-modal">${icon('x', 24)}</button>
           </div>
-          <form id="edit-order-form">
+          <form id="edit-order-form" style="display: flex; flex-direction: column; flex-grow: 1; overflow: hidden;">
             <input type="hidden" id="edit-order-id" />
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
-              <div class="form-group">
-                <label style="display:block; margin-bottom:8px; font-size:12px; font-weight:600;">Cliente</label>
-                <input type="text" id="edit-order-customer" class="auth-input" style="width:100%" required />
+            <div class="modal__body">
+              <div class="modal-form-grid">
+                <div class="form-group">
+                  <label style="display:block; margin-bottom:8px; font-size:12px; font-weight:600;">Cliente</label>
+                  <input type="text" id="edit-order-customer" class="auth-input" style="width:100%" required />
+                </div>
+                <div class="form-group">
+                  <label style="display:block; margin-bottom:8px; font-size:12px; font-weight:600;">Estado del Pedido</label>
+                  <select id="edit-order-status" class="auth-input" style="width:100%">
+                    <option value="pending">Pendiente depósito</option>
+                    <option value="partial">Pago parcial</option>
+                    <option value="processing">Orden procesada</option>
+                    <option value="transit">En tránsito</option>
+                    <option value="ready">Lista para entrega</option>
+                    <option value="balance">Balance pendiente</option>
+                    <option value="delivered">Completada</option>
+                    <option value="overdue">Vencida</option>
+                    <option value="cancelled">Cancelada</option>
+                  </select>
+                </div>
               </div>
-              <div class="form-group">
-                <label style="display:block; margin-bottom:8px; font-size:12px; font-weight:600;">Estado del Pedido</label>
-                <select id="edit-order-status" class="auth-input" style="width:100%">
-                  <option value="pending">Pendiente depósito</option>
-                  <option value="partial">Pago parcial</option>
-                  <option value="processing">Orden procesada</option>
-                  <option value="transit">En tránsito</option>
-                  <option value="ready">Lista para entrega</option>
-                  <option value="balance">Balance pendiente</option>
-                  <option value="delivered">Completada</option>
-                  <option value="overdue">Vencida</option>
-                  <option value="cancelled">Cancelada</option>
-                </select>
+              <div class="modal-form-grid">
+                <div class="form-group">
+                  <label style="display:block; margin-bottom:8px; font-size:12px; font-weight:600;">Método de Pago</label>
+                  <select id="edit-order-payment" class="auth-input" style="width:100%">
+                    <option value="ATH Móvil">ATH Móvil</option>
+                    <option value="PayPal">PayPal</option>
+                    <option value="Cash">Efectivo</option>
+                    <option value="Walmart">Walmart to Walmart</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label style="display:block; margin-bottom:8px; font-size:12px; font-weight:600;">Total ($)</label>
+                  <input type="number" id="edit-order-total" class="auth-input" style="width:100%" step="0.01" min="0" />
+                </div>
               </div>
-            </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
-              <div class="form-group">
-                <label style="display:block; margin-bottom:8px; font-size:12px; font-weight:600;">Método de Pago</label>
-                <select id="edit-order-payment" class="auth-input" style="width:100%">
-                  <option value="ATH Móvil">ATH Móvil</option>
-                  <option value="PayPal">PayPal</option>
-                  <option value="Cash">Efectivo</option>
-                  <option value="Walmart">Walmart to Walmart</option>
-                </select>
+              <div class="modal-form-grid">
+                <div class="form-group">
+                  <label style="display:block; margin-bottom:8px; font-size:12px; font-weight:600;">Fecha Límite</label>
+                  <input type="date" id="edit-order-duedate" class="auth-input" style="width:100%" />
+                </div>
+                <div class="form-group"></div>
               </div>
-              <div class="form-group">
-                <label style="display:block; margin-bottom:8px; font-size:12px; font-weight:600;">Total ($)</label>
-                <input type="number" id="edit-order-total" class="auth-input" style="width:100%" step="0.01" min="0" />
+              <div style="margin-bottom: 16px; padding: 12px; background: var(--color-bg-surface); border-radius: 8px; display:flex; align-items:center; justify-content:space-between;">
+                <div>
+                  <span style="font-size: 12px; font-weight: 600; color: var(--color-text-secondary);">Artículos del pedido</span>
+                  <span id="edit-order-items-count" style="font-size: 12px; color: var(--color-text-muted); margin-left: 8px;"></span>
+                </div>
+                <button type="button" class="btn btn--outline" id="edit-order-items-btn" style="padding: 4px 12px; font-size: 12px;">
+                  ${icon('edit-2', 14) || icon('edit', 14)} Editar Artículos
+                </button>
               </div>
-            </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
-              <div class="form-group">
-                <label style="display:block; margin-bottom:8px; font-size:12px; font-weight:600;">Fecha Límite</label>
-                <input type="date" id="edit-order-duedate" class="auth-input" style="width:100%" />
-              </div>
-              <div class="form-group"></div>
-            </div>
-            <div style="margin-bottom: 16px; padding: 12px; background: var(--color-bg-surface); border-radius: 8px; display:flex; align-items:center; justify-content:space-between;">
-              <div>
-                <span style="font-size: 12px; font-weight: 600; color: var(--color-text-secondary);">Artículos del pedido</span>
-                <span id="edit-order-items-count" style="font-size: 12px; color: var(--color-text-muted); margin-left: 8px;"></span>
-              </div>
-              <button type="button" class="btn btn--outline" id="edit-order-items-btn" style="padding: 4px 12px; font-size: 12px;">
-                ${icon('edit-2', 14) || icon('edit', 14)} Editar Artículos
-              </button>
             </div>
             <div class="modal__footer">
               <button type="button" class="btn btn--ghost" id="cancel-edit-order-btn">Cancelar</button>
@@ -126,19 +128,19 @@ export function renderVentasPage() {
 
       <!-- View Order Details Modal -->
       <div class="modal-overlay" id="view-order-modal">
-        <div class="modal" style="max-width: 500px;">
+        <div class="modal modal--order-view">
           <div class="modal__header">
             <h2 class="modal__title">Detalles del Pedido</h2>
             <button class="modal__close" id="close-view-order-modal">${icon('x', 24)}</button>
           </div>
-          <div id="view-order-content" style="margin-bottom: 24px;">
+          <div class="modal__body" id="view-order-content">
             <!-- Order details injected here -->
           </div>
-          <div class="modal__footer" style="justify-content: space-between;">
-            <button type="button" class="btn btn--outline" id="copy-whatsapp-btn" style="color: #25D366; border-color: #25D366;">
+          <div class="modal__footer--invoice">
+            <button type="button" class="btn btn--outline btn--whatsapp" id="copy-whatsapp-btn">
               ${icon('message-circle', 16)} Resumen WhatsApp
             </button>
-            <div style="display: flex; gap: 8px;">
+            <div class="modal__footer-actions">
               <button type="button" class="btn btn--outline" id="adjust-order-btn">
                 ${icon('edit-2', 16) || icon('edit', 16)} Ajustar
               </button>
@@ -539,7 +541,6 @@ export async function initVentasPage() {
         }
       });
     });
-
   } catch (err) {
     container.innerHTML = `<div style="text-align:center; padding:40px; grid-column:1/-1; color:var(--color-error);">Error al cargar pedidos.</div>`;
     console.error(err);
@@ -555,28 +556,27 @@ function renderOrderItem(order) {
     'cancelled': 'Cancelado'
   };
   
-  const statusLabel = statusLabels[order.status] || order.status;
   const initials = order.customer.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
   
   return `
-    <div class="order-item animate-fade-in-up" style="position:relative; display:flex; align-items:center; gap:16px;">
+    <div class="order-item animate-fade-in-up">
       <!-- Order ID -->
-      <div class="order-item__id" style="min-width: 80px;">${order.id}</div>
+      <div class="order-item__id">${order.id}</div>
       
       <!-- Customer -->
-      <div class="order-item__customer customer-link" data-id="${order.id}" style="flex:1; cursor:pointer; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='1'">
+      <div class="order-item__customer customer-link" data-id="${order.id}" style="cursor:pointer; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='1'">
         <div class="order-item__avatar">${initials}</div>
         <div class="order-item__name" style="text-decoration: underline; text-decoration-color: var(--color-neutral-divider); text-underline-offset: 4px;">${order.customer}</div>
       </div>
       
       <!-- Date -->
-      <div class="order-item__meta" style="min-width: 100px;">
+      <div class="order-item__meta">
         <span class="order-item__label">Fecha</span>
         <span class="order-item__value">${formatRelativeTime(order.date)}</span>
       </div>
       
       <!-- Status -->
-      <div style="min-width: 130px;">
+      <div class="order-item__status">
         <select class="status-badge status-badge--${order.status} inline-status-select" data-id="${order.id}" style="border:none; cursor:pointer; font-weight:bold; font-size:11px; padding-right:24px; outline:none; appearance:none; background-image:url('data:image/svg+xml;utf8,<svg fill=%22none%22 stroke=%22currentColor%22 stroke-width=%222%22 viewBox=%220 0 24 24%22 xmlns=%22http://www.w3.org/2000/svg%22><path stroke-linecap=%22round%22 stroke-linejoin=%22round%22 d=%22M19 9l-7 7-7-7%22></path></svg>'); background-repeat:no-repeat; background-position:right 6px center; background-size:12px;">
           <option value="pending" ${order.status === 'pending' ? 'selected' : ''}>Pendiente dep.</option>
           <option value="partial" ${order.status === 'partial' ? 'selected' : ''}>Pago parcial</option>
@@ -591,16 +591,16 @@ function renderOrderItem(order) {
       </div>
       
       <!-- Total & Balance -->
-      <div class="order-item__total" style="min-width: 120px;">
+      <div class="order-item__total">
         <div style="font-weight:600; font-size: 14px;">T: ${formatCurrency((order.total || 0) + (order.shippingCost || 0))}</div>
         <div style="font-size: 11px; color: ${(order.pendingBalance !== undefined ? order.pendingBalance : order.total) > 0 ? 'var(--color-error)' : 'var(--color-success)'}; font-weight: 600;">
           P: ${formatCurrency(order.pendingBalance !== undefined ? order.pendingBalance : order.total)}
         </div>
         ${order.dueDate ? `<div style="font-size: 10px; color: var(--color-text-muted);">Vence: ${new Date(order.dueDate).toLocaleDateString('es-ES', {month:'short', day:'numeric'})}</div>` : ''}
       </div>
-
+ 
       <!-- Action Menu -->
-      <div class="action-menu" style="margin-left:auto;">
+      <div class="action-menu">
         <button class="btn btn--icon action-menu-toggle" aria-label="Opciones de pedido ${order.id}">
           ${icon('settings', 16)}
         </button>
@@ -619,3 +619,5 @@ function renderOrderItem(order) {
     </div>
   `;
 }
+
+

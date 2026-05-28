@@ -144,10 +144,54 @@ class SupabaseDB {
       itemslist: finalItemsList
     };
     
-    const { data, error } = await supabase.from('orders').upsert(payload).select();
-    if (error) throw error;
+    const isAdmin = localStorage.getItem('koala_auth_session') === 'true';
+    let saveError = null;
+    
+    if (isAdmin) {
+      const { data, error } = await supabase.from('orders').upsert(payload).select();
+      saveError = error;
+    } else {
+      // For public customers, we do not call .select() to respect RLS digital privacy policies
+      const { error } = await supabase.from('orders').upsert(payload);
+      saveError = error;
+    }
+    
+    if (saveError) throw saveError;
     
     if (!existing) {
+      // Auto-register/synchronize customer in the clients directory dynamically
+      try {
+        await this.ensureClientExists(order.customer, order, {
+          phone: order.customerPhone || '',
+          email: order.customerEmail || '',
+          city: order.customerCity || ''
+        });
+      } catch (err) {
+        console.error('Error auto-syncing client on new order:', err);
+      }
+
+      // Loop through order items and mark ready products as sold to take them out of circulation immediately
+      const orderItems = order.itemsList || order.itemslist || [];
+      for (const item of orderItems) {
+        if (item.inventoryType === 'ready_now' || (item.id && item.id.startsWith('R'))) {
+          try {
+            await this.markReadySold(item.id);
+            // Create a special ready sold notification for admin
+            await this.saveNotification({
+              id: 'NOTIF-READY-' + Date.now() + '-' + item.id,
+              type: 'ready_sold',
+              title: `⚡ Artículo READY Vendido`,
+              message: `El producto KOALA READY "${item.name}" (Talla: ${item.selectedSize || 'U'}) se vendió en el pedido ${order.id}.`,
+              link: '#/admin/ready',
+              date: new Date().toISOString(),
+              read: false
+            });
+          } catch (err) {
+            console.error('Error marking ready product as sold:', err);
+          }
+        }
+      }
+
       // Build a detailed notification with real order data
       const itemsSummary = (order.itemsList && order.itemsList.length > 0)
         ? order.itemsList.map(i => `${i.name} x${i.qty}`).join(', ')
@@ -174,21 +218,80 @@ class SupabaseDB {
 
   // --- CLIENTS ---
   async getAllClients(limit = null) {
-    let query = supabase.from('clients').select('*').order('lastorder', { ascending: false });
-    if (limit) query = query.limit(limit);
-    const { data, error } = await query;
+    let query = supabase.from('clients').select('*');
+    const { data: clientsData, error } = await query;
     if (error) return [];
-    
-    // Polyfill missing 'city' and 'clientType' column parsing from status
-    return (data || []).map(client => {
+
+    let orders = [];
+    try {
+      orders = await this.getAllOrders();
+    } catch (e) {
+      console.error('Error fetching orders for client aggregation:', e);
+    }
+
+    const processedClients = (clientsData || []).map(client => {
+      // 1. Normalize spent
+      client.spent = client.spent || 0;
+      
+      // 2. Extract city and clientType polyfills from status
       if (client.status && client.status.includes('||')) {
         const parts = client.status.split('||');
         client.status = parts[0];
         client.city = parts[1] || '';
         client.clientType = parts[2] || 'standard';
+      } else {
+        client.city = client.city || '';
+        client.clientType = client.clientType || 'standard';
       }
+
+      // 3. Dynamic real-time aggregation from matching orders
+      const clientName = (client.name || '').toLowerCase().trim();
+      const clientPhone = (client.phone || '').replace(/[^0-9]/g, '');
+      const clientEmail = (client.email || '').toLowerCase().trim();
+
+      const clientOrders = orders.filter(o => {
+        const oCustomer = (o.customer || '').toLowerCase().trim();
+        const oPhone = (o.customerPhone || '').replace(/[^0-9]/g, '');
+        const oEmail = (o.customerEmail || '').toLowerCase().trim();
+
+        if (clientName && oCustomer && clientName === oCustomer) return true;
+        if (clientPhone && oPhone && clientPhone === oPhone) return true;
+        if (clientEmail && oEmail && clientEmail === oEmail) return true;
+        return false;
+      });
+
+      // Recalculate stats dynamically so they are always in perfect sync
+      client.ordersCount = clientOrders.length;
+      client.spent = clientOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+      
+      if (clientOrders.length > 0) {
+        // Sort matching orders by date descending
+        const sortedOrders = [...clientOrders].sort((a, b) => new Date(b.date) - new Date(a.date));
+        client.lastOrder = sortedOrders[0].date;
+      } else {
+        client.lastOrder = client.lastorder || null; // fallback to saved raw db column if no orders match
+      }
+
+      // Update client status automatically if it has changed due to orders count
+      if (client.ordersCount >= 5) client.status = 'vip';
+      else if (client.ordersCount >= 2) client.status = 'active';
+      else if (client.ordersCount === 0) client.status = 'new';
+
       return client;
     });
+
+    // Sort by last purchase date descending (newest purchase first)
+    processedClients.sort((a, b) => {
+      if (!a.lastOrder && !b.lastOrder) return 0;
+      if (!a.lastOrder) return 1;
+      if (!b.lastOrder) return -1;
+      return new Date(b.lastOrder) - new Date(a.lastOrder);
+    });
+
+    if (limit) {
+      return processedClients.slice(0, limit);
+    }
+    return processedClients;
   }
 
   async saveClient(client) {
@@ -202,17 +305,33 @@ class SupabaseDB {
       name: client.name,
       email: client.email,
       phone: client.phone,
-      spent: client.spent,
-      orderscount: client.ordersCount || client.orderscount || 0,
+      spent: client.spent || 0,
+      orderscount: client.ordersCount !== undefined ? client.ordersCount : (client.orderscount || 0),
       lastorder: client.lastOrder || client.lastorder || new Date().toISOString(),
       status: encodedStatus
     };
     
-    const { data, error } = await supabase.from('clients').upsert(payload).select();
-    if (error) throw error;
+    const isAdmin = localStorage.getItem('koala_auth_session') === 'true';
+    let saveError = null;
+    let savedClient = client;
+
+    if (isAdmin) {
+      const { data, error } = await supabase.from('clients').upsert(payload).select();
+      saveError = error;
+      if (data?.[0]) {
+        savedClient = data[0];
+      }
+    } else {
+      // Public customer: omit .select() to preserve elite database-level digital privacy
+      const { error } = await supabase.from('clients').upsert(payload);
+      saveError = error;
+    }
     
-    // Parse back before returning
-    const savedClient = data?.[0] || client;
+    if (saveError) throw saveError;
+    
+    if (savedClient.orderscount !== undefined) savedClient.ordersCount = savedClient.orderscount;
+    if (savedClient.lastorder !== undefined) savedClient.lastOrder = savedClient.lastorder;
+
     if (savedClient.status && savedClient.status.includes('||')) {
       const parts = savedClient.status.split('||');
       savedClient.status = parts[0];

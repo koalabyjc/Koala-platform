@@ -63,15 +63,17 @@ export function renderMarcasPage() {
             <h2 class="modal__title" id="brand-modal-title">Nueva Marca</h2>
             <button class="modal__close" id="close-brand-modal">${icon('x', 24)}</button>
           </div>
-          <form id="brand-form">
+          <form id="brand-form" style="display: flex; flex-direction: column; flex-grow: 1; overflow: hidden;">
             <input type="hidden" id="brand-id" />
-            <div class="form-group" style="margin-bottom: 16px;">
-              <label style="display:block; margin-bottom:8px; font-size:12px; font-weight:600;">Nombre de la Marca</label>
-              <input type="text" id="brand-name" class="auth-input" placeholder="Ej. Nike, New Balance, Alo..." style="width:100%" required />
-            </div>
-            <div class="form-group" style="margin-bottom: 24px;">
-              <label style="display:block; margin-bottom:8px; font-size:12px; font-weight:600;">Logo o Siglas</label>
-              <input type="text" id="brand-logo" class="auth-input" placeholder="Ej. NK o un link de imagen" style="width:100%" />
+            <div class="modal__body">
+              <div class="form-group" style="margin-bottom: 16px;">
+                <label style="display:block; margin-bottom:8px; font-size:12px; font-weight:600;">Nombre de la Marca</label>
+                <input type="text" id="brand-name" class="auth-input" placeholder="Ej. Nike, New Balance, Alo..." style="width:100%" required />
+              </div>
+              <div class="form-group" style="margin-bottom: 24px;">
+                <label style="display:block; margin-bottom:8px; font-size:12px; font-weight:600;">Logo o Siglas</label>
+                <input type="text" id="brand-logo" class="auth-input" placeholder="Ej. NK o un link de imagen" style="width:100%" />
+              </div>
             </div>
             <div class="modal__footer">
               <button type="button" class="btn btn--ghost" id="cancel-brand-btn">Cancelar</button>

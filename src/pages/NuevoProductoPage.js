@@ -7,6 +7,7 @@ import { icon } from '../utils/icons.js';
 import { localDb } from '../utils/localDb.js';
 import { classifyProduct } from '../utils/autoClassifier.js';
 import { renderSizePicker } from '../utils/sizeChart.js';
+import { compressImage } from '../utils/imageCompressor.js';
 
 let uploadedImages = []; // Array of base64 strings
 let selectedSizes = [];
@@ -297,22 +298,15 @@ export async function initNuevoProductoPage() {
     previewGrid.appendChild(loadingCard);
 
     try {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const placeholderEl = document.getElementById('loading-placeholder-card');
-        if (placeholderEl) placeholderEl.remove();
+      const compressedDataUrl = await compressImage(file);
+      const placeholderEl = document.getElementById('loading-placeholder-card');
+      if (placeholderEl) placeholderEl.remove();
 
-        uploadedImages.push(e.target.result);
-        renderPreviews();
-      };
-      reader.onerror = (err) => {
-        console.error(err);
-        alert('Error leyendo la imagen');
-        renderPreviews();
-      };
-      reader.readAsDataURL(file);
+      uploadedImages.push(compressedDataUrl);
+      renderPreviews();
     } catch (err) {
       console.error(err);
+      alert('Error procesando la imagen');
       renderPreviews();
     }
   }

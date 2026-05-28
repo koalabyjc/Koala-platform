@@ -4,6 +4,8 @@
    ============================================ */
 
 import { icon } from '../utils/icons.js';
+import { supabase } from '../utils/supabaseClient.js';
+import { compressImage } from '../utils/imageCompressor.js';
 
 /**
  * Render the premium System Settings HTML
@@ -545,10 +547,13 @@ export function renderConfiguracionPage() {
             </div>
           </div>
           
-          <div style="min-height: 48px; display: flex; align-items: flex-end;">
-            <p style="font-size: 11px; color: var(--color-text-muted); margin: 0; line-height: 1.4;">
-              Las imágenes de productos se almacenan de manera óptima para maximizar la velocidad de carga en dispositivos móviles de tus clientes.
-            </p>
+          <div style="margin-top: 16px; border-top: 1px solid rgba(74, 55, 40, 0.04); padding-top: 16px;">
+            <button id="btn-compress-existing" class="btn-premium" style="font-size: 12px; padding: 10px; gap: 6px; width: 100%;">
+              ${icon('zap', 14)} Comprimir Imágenes Existentes
+            </button>
+            <div id="compression-progress" style="font-size: 11px; color: var(--color-text-muted); margin-top: 8px; text-align: center; display: none; line-height: 1.4;">
+              Analizando base de datos...
+            </div>
           </div>
         </div>
 
@@ -674,6 +679,8 @@ export function initConfiguracionPage() {
     const lastBackupText = document.getElementById('last-backup-text');
     const btnCreateBackup = document.getElementById('btn-create-backup');
     const btnRestoreBackup = document.getElementById('btn-restore-backup');
+    const btnCompressExisting = document.getElementById('btn-compress-existing');
+    const compressionProgress = document.getElementById('compression-progress');
     
     // Modal DOM
     const backupModal = document.getElementById('backup-modal');
@@ -775,6 +782,84 @@ export function initConfiguracionPage() {
           ultrahd: 'Ultra HD'
         };
         showToast(`Compresión establecida en calidad: ${qualityLabels[val]}`, 'info');
+      });
+    }
+
+    if (btnCompressExisting) {
+      btnCompressExisting.addEventListener('click', async () => {
+        btnCompressExisting.disabled = true;
+        const originalText = btnCompressExisting.innerHTML;
+        btnCompressExisting.innerHTML = `${icon('settings', 14)} Procesando...`;
+        compressionProgress.style.display = 'block';
+        compressionProgress.innerHTML = 'Obteniendo lista de productos...';
+
+        try {
+          const { data: products, error } = await supabase.from('products').select('id, name');
+          if (error) throw error;
+
+          let countCompressed = 0;
+          let totalBytesSaved = 0;
+          let processed = 0;
+
+          compressionProgress.innerHTML = `Analizando ${products.length} productos...`;
+
+          for (const p of products) {
+            processed++;
+            compressionProgress.innerHTML = `<span style="font-weight:600; color:var(--color-primary);">Procesando: ${processed}/${products.length}</span><br/><span style="font-size:10px; color:var(--color-text-muted);">${p.name}</span>`;
+
+            const { data: details, error: detailsError } = await supabase.from('products').select('id, name, image').eq('id', p.id).single();
+            if (detailsError || !details || !details.image) continue;
+
+            const originalImage = details.image;
+            let rawBase64 = '';
+            let isHtmlTag = false;
+
+            if (originalImage.startsWith('<img')) {
+              isHtmlTag = true;
+              const match = originalImage.match(/src="([^"]+)"/);
+              if (match) rawBase64 = match[1];
+            } else {
+              rawBase64 = originalImage;
+            }
+
+            // If it's a large base64 image (> 150KB)
+            if (rawBase64 && rawBase64.startsWith('data:image/') && rawBase64.length > 150 * 1024) {
+              const originalSize = rawBase64.length;
+              compressionProgress.innerHTML = `<span style="font-weight:600; color:var(--color-primary);">Comprimiendo: ${processed}/${products.length}</span><br/><span style="font-size:10px; color:var(--color-text-muted);">${p.name} (${(originalSize / 1024 / 1024).toFixed(1)} MB)</span>`;
+
+              const compressedBase64 = await compressImage(rawBase64, { force: true, maxDim: 800, quality: 0.75 });
+              const compressedSize = compressedBase64.length;
+
+              if (compressedSize < originalSize) {
+                const saved = originalSize - compressedSize;
+                totalBytesSaved += saved;
+
+                // Re-pack
+                const newImageContent = isHtmlTag 
+                  ? `<img src="${compressedBase64}" alt="${p.name}" style="width:100%; height:100%; object-fit:cover;" />`
+                  : compressedBase64;
+
+                // Save back to database
+                const { error: updateError } = await supabase.from('products').update({ image: newImageContent }).eq('id', p.id);
+                if (updateError) {
+                  console.error('Update failed for product:', p.id, updateError.message);
+                } else {
+                  countCompressed++;
+                }
+              }
+            }
+          }
+
+          compressionProgress.innerHTML = `<span style="color:var(--color-success); font-weight:600;">¡Completado!</span><br/>Se optimizaron ${countCompressed} imágenes.<br/>Ahorro de ${(totalBytesSaved / 1024 / 1024).toFixed(1)} MB en la base de datos.`;
+          showToast(`¡Base de datos optimizada! Ahorro: ${(totalBytesSaved / 1024 / 1024).toFixed(1)} MB`, 'check-circle');
+        } catch (err) {
+          console.error(err);
+          compressionProgress.innerHTML = `<span style="color:var(--color-error)">Error: ${err.message}</span>`;
+          showToast('Error al optimizar la base de datos', 'alert-triangle');
+        } finally {
+          btnCompressExisting.disabled = false;
+          btnCompressExisting.innerHTML = originalText;
+        }
       });
     }
 

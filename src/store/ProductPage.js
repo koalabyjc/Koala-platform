@@ -29,7 +29,7 @@ export async function initProductPage(params) {
 
   try {
     const products = await localDb.getAllProducts();
-    currentProduct = products.find(p => p.id === params.id);
+    currentProduct = products.find(p => p.id === params.id && p.status !== 'draft' && p.status !== 'hidden');
 
     if (!currentProduct) {
       container.innerHTML = `

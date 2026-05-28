@@ -71,43 +71,45 @@ export function renderClientesPage() {
             <h2 class="modal__title" id="client-modal-title">Nuevo Cliente</h2>
             <button class="modal__close" id="close-client-modal">${icon('x', 24)}</button>
           </div>
-          <form id="client-form">
+          <form id="client-form" style="display: flex; flex-direction: column; flex-grow: 1; overflow: hidden;">
             <input type="hidden" id="client-id" />
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
-              <div class="form-group">
-                <label style="display:block; margin-bottom:8px; font-size:12px; font-weight:600;">Nombre</label>
-                <input type="text" id="client-name" class="auth-input" style="width:100%" required />
+            <div class="modal__body">
+              <div class="modal-form-grid">
+                <div class="form-group">
+                  <label style="display:block; margin-bottom:8px; font-size:12px; font-weight:600;">Nombre</label>
+                  <input type="text" id="client-name" class="auth-input" style="width:100%" required />
+                </div>
+                <div class="form-group">
+                  <label style="display:block; margin-bottom:8px; font-size:12px; font-weight:600;">Teléfono</label>
+                  <input type="tel" id="client-phone" class="auth-input" style="width:100%" placeholder="787-555-0000" />
+                </div>
               </div>
-              <div class="form-group">
-                <label style="display:block; margin-bottom:8px; font-size:12px; font-weight:600;">Teléfono</label>
-                <input type="tel" id="client-phone" class="auth-input" style="width:100%" placeholder="787-555-0000" />
+              <div class="modal-form-grid">
+                <div class="form-group">
+                  <label style="display:block; margin-bottom:8px; font-size:12px; font-weight:600;">Email</label>
+                  <input type="email" id="client-email" class="auth-input" style="width:100%" placeholder="correo@ejemplo.com" />
+                </div>
+                <div class="form-group">
+                  <label style="display:block; margin-bottom:8px; font-size:12px; font-weight:600;">Ciudad / Pueblo</label>
+                  <input type="text" id="client-city" class="auth-input" style="width:100%" placeholder="Ej. San Juan" />
+                </div>
               </div>
-            </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
-              <div class="form-group">
-                <label style="display:block; margin-bottom:8px; font-size:12px; font-weight:600;">Email</label>
-                <input type="email" id="client-email" class="auth-input" style="width:100%" placeholder="correo@ejemplo.com" />
-              </div>
-              <div class="form-group">
-                <label style="display:block; margin-bottom:8px; font-size:12px; font-weight:600;">Ciudad / Pueblo</label>
-                <input type="text" id="client-city" class="auth-input" style="width:100%" placeholder="Ej. San Juan" />
-              </div>
-            </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
-              <div class="form-group">
-                <label style="display:block; margin-bottom:8px; font-size:12px; font-weight:600;">Estado</label>
-                <select id="client-status" class="auth-input" style="width:100%">
-                  <option value="new">Nuevo</option>
-                  <option value="active">Activo</option>
-                  <option value="vip">VIP</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label style="display:block; margin-bottom:8px; font-size:12px; font-weight:600;">Nivel de Confianza</label>
-                <select id="client-type" class="auth-input" style="width:100%">
-                  <option value="standard">Estándar (Req. Depósito)</option>
-                  <option value="trusted">Trusted (Flexible)</option>
-                </select>
+              <div class="modal-form-grid">
+                <div class="form-group">
+                  <label style="display:block; margin-bottom:8px; font-size:12px; font-weight:600;">Estado</label>
+                  <select id="client-status" class="auth-input" style="width:100%">
+                    <option value="new">Nuevo</option>
+                    <option value="active">Activo</option>
+                    <option value="vip">VIP</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label style="display:block; margin-bottom:8px; font-size:12px; font-weight:600;">Nivel de Confianza</label>
+                  <select id="client-type" class="auth-input" style="width:100%">
+                    <option value="standard">Estándar (Req. Depósito)</option>
+                    <option value="trusted">Trusted (Flexible)</option>
+                  </select>
+                </div>
               </div>
             </div>
             <div class="modal__footer">
@@ -311,26 +313,31 @@ function renderClientCard(client) {
     : '';
 
   return `
-    <div class="client-card animate-fade-in-up">
+    <div class="client-card animate-fade-in-up" style="position: relative;">
+      <!-- Options Cog (ruedita) absolutely positioned at the top right -->
+      <div class="action-menu" style="position: absolute; top: 16px; right: 16px; z-index: 5;">
+        <button class="action-menu-toggle" aria-label="Opciones" style="background: none; border: none; color: var(--color-text-muted); cursor: pointer; padding: 6px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.background='var(--color-bg-surface)'" onmouseout="this.style.background='none'">
+          ${icon('settings', 18)}
+        </button>
+        <div class="action-menu__dropdown" style="bottom: auto; top: 110%;">
+          <button class="action-menu__item action-edit" data-id="${client.id}">${icon('edit', 14)} Editar</button>
+          <button class="action-menu__item action-delete" data-id="${client.id}" style="color:var(--color-error);">${icon('trash-2', 14)} Eliminar</button>
+        </div>
+      </div>
+
       <!-- Header -->
-      <div class="client-card__header">
+      <div class="client-card__header" style="padding-right: 28px;">
         <div class="client-card__avatar ${avatarClass}">${initials}</div>
-        <div class="client-card__info" style="flex:1;">
-          <h3 class="client-card__name" style="display:flex; align-items:center;">${client.name} ${typeBadge}</h3>
-          <div class="client-card__email">
+        <div class="client-card__info" style="flex:1; min-width:0;">
+          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:4px;">
+            <h3 class="client-card__name" style="margin:0; font-size:16px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:140px;">${client.name}</h3>
+            ${typeBadge}
+            <span class="status-badge status-badge--${client.status}" style="font-size:9px; padding:2px 8px; flex-shrink:0;">${statusLabel}</span>
+          </div>
+          <div class="client-card__email" style="font-size:12px; color:var(--color-text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
             ${client.email ? `${icon('mail', 12)} ${client.email}` : `${icon('users', 12)} Sin email`}
           </div>
-          ${contactLine ? `<div style="font-size:12px; color:var(--color-text-muted); margin-top:4px; display:flex; align-items:center; gap:4px;">${contactLine}</div>` : ''}
-        </div>
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <span class="status-badge status-badge--${client.status}">${statusLabel}</span>
-          <div class="action-menu" style="position:relative;">
-            <button class="btn-icon action-menu-toggle" aria-label="Opciones">${icon('settings', 16)}</button>
-            <div class="action-menu__dropdown">
-              <button class="action-menu__item action-edit" data-id="${client.id}">${icon('edit', 14)} Editar</button>
-              <button class="action-menu__item action-delete" data-id="${client.id}" style="color:var(--color-error);">${icon('trash-2', 14)} Eliminar</button>
-            </div>
-          </div>
+          ${contactLine ? `<div style="font-size:12px; color:var(--color-text-muted); margin-top:4px; display:flex; align-items:center; gap:4px; flex-wrap:wrap;">${contactLine}</div>` : ''}
         </div>
       </div>
       

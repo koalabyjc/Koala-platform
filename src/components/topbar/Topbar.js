@@ -102,10 +102,14 @@ export async function initTopbar() {
           const timeAgo = formatRelativeTime(n.date);
           const notifMessage = n.message || n.description || '';
           const notifLink = n.link || '#/admin/ventas';
-          const notifIcon = n.type === 'order' ? 'shopping-bag' : 'package';
+          
+          let notifIcon = 'package';
+          if (n.type === 'order') notifIcon = 'shopping-bag';
+          else if (n.type === 'ready_sold') notifIcon = 'zap';
+
           return `
             <div class="notif-card ${isUnread ? 'notif-card--unread' : ''}" data-id="${n.id}" data-link="${notifLink}" style="cursor: pointer;">
-              <div class="notif-card__icon">
+              <div class="notif-card__icon" style="${n.type === 'ready_sold' ? 'background: var(--color-ready-badge-bg); color: var(--color-ready-badge-text); border-radius: 50%; width:32px; height:32px; display:flex; align-items:center; justify-content:center;' : ''}">
                 ${icon(notifIcon, 18)}
               </div>
               <div class="notif-card__body">

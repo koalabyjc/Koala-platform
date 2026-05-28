@@ -10,12 +10,14 @@ import { localDb } from '../utils/localDb.js';
 import { openLightbox } from '../utils/lightbox.js';
 import { classifyAllProducts, classifyProduct } from '../utils/autoClassifier.js';
 import { renderSizePicker } from '../utils/sizeChart.js';
+import { compressImage } from '../utils/imageCompressor.js';
 
 let allBrands = [];
 let allProducts = [];
 let adminFilter = { type: 'all', value: '' };
 let modalInitialized = false;
 let editSelectedSizes = [];
+let editSelectedImage = '';
 let productViewMode = localStorage.getItem('koala_product_view') || 'large'; // 'large' or 'compact'
 
 const MAIN_CATEGORIES = [
@@ -116,77 +118,96 @@ export function renderProductosPage() {
             <h2 class="modal__title">Editar Producto</h2>
             <button class="modal__close" id="close-edit-modal">${icon('x', 24)}</button>
           </div>
-          <form id="edit-product-form">
+          <form id="edit-product-form" style="display: flex; flex-direction: column; flex-grow: 1; overflow: hidden;">
             <input type="hidden" id="edit-product-id" />
             
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
-              <div class="form-group">
-                <label style="display:block; margin-bottom:8px; font-size:12px; font-weight:600;">Nombre del Producto</label>
-                <input type="text" id="edit-product-name" class="auth-input" style="width:100%" required />
+            <div class="modal__body">
+              <div class="modal-form-grid">
+                <div class="form-group">
+                  <label style="display:block; margin-bottom:8px; font-size:12px; font-weight:600;">Nombre del Producto</label>
+                  <input type="text" id="edit-product-name" class="auth-input" style="width:100%" required />
+                </div>
+                <div class="form-group">
+                  <label style="display:block; margin-bottom:8px; font-size:12px; font-weight:600;">Marca</label>
+                  <input type="text" id="edit-product-brand" list="edit-brand-list" class="auth-input" style="width:100%" placeholder="Escribe o selecciona..." required />
+                  <datalist id="edit-brand-list"></datalist>
+                </div>
               </div>
-              <div class="form-group">
-                <label style="display:block; margin-bottom:8px; font-size:12px; font-weight:600;">Marca</label>
-                <input type="text" id="edit-product-brand" list="edit-brand-list" class="auth-input" style="width:100%" placeholder="Escribe o selecciona..." required />
-                <datalist id="edit-brand-list"></datalist>
-              </div>
-            </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
-              <div class="form-group">
-                <label style="display:block; margin-bottom:8px; font-size:12px; font-weight:600;">Departamento</label>
-                <select id="edit-product-dept" class="auth-input" style="width:100%" required>
-                  <option value="Hombre">Hombre</option>
-                  <option value="Mujer">Mujer</option>
-                  <option value="Unisex">Unisex</option>
-                  <option value="Niños">Niños</option>
-                </select>
+              <div class="modal-form-grid">
+                <div class="form-group">
+                  <label style="display:block; margin-bottom:8px; font-size:12px; font-weight:600;">Departamento</label>
+                  <select id="edit-product-dept" class="auth-input" style="width:100%" required>
+                    <option value="Hombre">Hombre</option>
+                    <option value="Mujer">Mujer</option>
+                    <option value="Unisex">Unisex</option>
+                    <option value="Niños">Niños</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label style="display:block; margin-bottom:8px; font-size:12px; font-weight:600;">Categoría</label>
+                  <select id="edit-product-category" class="auth-input" style="width:100%" required>
+                    <option value="Tenis y Zapatos">Tenis y Zapatos</option>
+                    <optgroup label="Ropa">
+                      <option value="Ropa - T-Shirts">T-Shirts</option>
+                      <option value="Ropa - Polos">Polos</option>
+                      <option value="Ropa - Hoodies">Hoodies</option>
+                      <option value="Ropa - Pantalones Largos">Pantalones Largos</option>
+                      <option value="Ropa - Pantalones Cortos">Pantalones Cortos</option>
+                      <option value="Ropa - Camisas Manga Larga">Camisas Manga Larga</option>
+                      <option value="Ropa - Ropa Deportiva">Ropa Deportiva</option>
+                      <option value="Ropa - Sets">Sets</option>
+                      <option value="Ropa - Vestidos">Vestidos</option>
+                      <option value="Ropa - Trajes de Baños">Trajes de Baños</option>
+                      <option value="Ropa - Camisas sin manga">Camisas sin manga</option>
+                      <option value="Ropa - Crop Top">Crop Top</option>
+                    </optgroup>
+                    <option value="Gorras">Gorras</option>
+                    <option value="Gafas">Gafas</option>
+                    <optgroup label="Prendas">
+                      <option value="Prendas - Collares">Collares</option>
+                      <option value="Prendas - Pantallas">Pantallas</option>
+                      <option value="Prendas - Pulseras">Pulseras</option>
+                      <option value="Prendas - Sortijas">Sortijas</option>
+                      <option value="Prendas - Cadenas">Cadenas</option>
+                    </optgroup>
+                    <option value="Carteras">Carteras</option>
+                    <option value="Relojes">Relojes</option>
+                    <option value="Splash">Splash</option>
+                    <option value="Medias">Medias</option>
+                    <option value="Accesorios">Accesorios</option>
+                  </select>
+                </div>
               </div>
-              <div class="form-group">
-                <label style="display:block; margin-bottom:8px; font-size:12px; font-weight:600;">Categoría</label>
-                <select id="edit-product-category" class="auth-input" style="width:100%" required>
-                  <option value="Tenis y Zapatos">Tenis y Zapatos</option>
-                  <optgroup label="Ropa">
-                    <option value="Ropa - T-Shirts">T-Shirts</option>
-                    <option value="Ropa - Polos">Polos</option>
-                    <option value="Ropa - Hoodies">Hoodies</option>
-                    <option value="Ropa - Pantalones Largos">Pantalones Largos</option>
-                    <option value="Ropa - Pantalones Cortos">Pantalones Cortos</option>
-                    <option value="Ropa - Camisas Manga Larga">Camisas Manga Larga</option>
-                    <option value="Ropa - Ropa Deportiva">Ropa Deportiva</option>
-                    <option value="Ropa - Sets">Sets</option>
-                    <option value="Ropa - Vestidos">Vestidos</option>
-                    <option value="Ropa - Trajes de Baños">Trajes de Baños</option>
-                    <option value="Ropa - Camisas sin manga">Camisas sin manga</option>
-                    <option value="Ropa - Crop Top">Crop Top</option>
-                  </optgroup>
-                  <option value="Gorras">Gorras</option>
-                  <option value="Gafas">Gafas</option>
-                  <optgroup label="Prendas">
-                    <option value="Prendas - Collares">Collares</option>
-                    <option value="Prendas - Pantallas">Pantallas</option>
-                    <option value="Prendas - Pulseras">Pulseras</option>
-                    <option value="Prendas - Sortijas">Sortijas</option>
-                    <option value="Prendas - Cadenas">Cadenas</option>
-                  </optgroup>
-                  <option value="Carteras">Carteras</option>
-                  <option value="Relojes">Relojes</option>
-                  <option value="Splash">Splash</option>
-                  <option value="Medias">Medias</option>
-                  <option value="Accesorios">Accesorios</option>
-                </select>
-              </div>
-            </div>
 
-            <div style="margin-bottom: 16px;">
-              <div class="form-group">
-                <label style="display:block; margin-bottom:8px; font-size:12px; font-weight:600;">Precio ($)</label>
-                <input type="number" id="edit-product-price" class="auth-input" style="width:100%; max-width:250px;" step="0.01" min="0" required />
+              <div style="margin-bottom: 16px;">
+                <div class="form-group">
+                  <label style="display:block; margin-bottom:8px; font-size:12px; font-weight:600;">Precio ($)</label>
+                  <input type="number" id="edit-product-price" class="auth-input" style="width:100%; max-width:250px;" step="0.01" min="0" required />
+                </div>
               </div>
-            </div>
 
-            <!-- Size Picker -->
-            <div style="margin-bottom: 24px;">
-              <div id="edit-size-picker-container" style="min-height: 96px; display: flex; flex-direction: column; justify-content: center;"></div>
+              <!-- Edit Image Uploader -->
+              <div style="margin-bottom: 20px;">
+                <div class="form-group">
+                  <label style="display:block; margin-bottom:8px; font-size:12px; font-weight:600;">Imagen del Producto</label>
+                  <div style="display:flex; align-items:center; gap:16px;">
+                    <div id="edit-image-preview" style="width: 70px; height: 70px; border-radius: 8px; border: 1px solid var(--color-neutral-border); overflow: hidden; display: flex; align-items: center; justify-content: center; background: var(--color-bg-subtle);">
+                      📦
+                    </div>
+                    <div>
+                      <button type="button" class="btn btn--outline" id="btn-change-edit-image" style="padding: 6px 12px; font-size:11px; font-weight:600;">Cambiar Imagen</button>
+                      <input type="file" id="edit-image-input" style="display:none;" accept="image/*" />
+                      <span style="font-size:10px; color:var(--color-text-muted); display:block; margin-top:4px;">*Auto-comprimida en móvil</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Size Picker -->
+              <div style="margin-bottom: 24px;">
+                <div id="edit-size-picker-container" style="min-height: 96px; display: flex; flex-direction: column; justify-content: center;"></div>
+              </div>
             </div>
 
             <div class="modal__footer">
@@ -441,7 +462,14 @@ function setupEditModal() {
       product.department = newDept;
       product.category = newCat;
       product.sizes = [...editSelectedSizes];
-      product.status = 'active';
+      product.status = product.status || 'active';
+
+      // Re-pack image if changed
+      if (editSelectedImage && editSelectedImage.startsWith('data:image/')) {
+        product.image = `<img src="${editSelectedImage}" alt="${newName}" style="width:100%; height:100%; object-fit:cover;" />`;
+      } else {
+        product.image = editSelectedImage;
+      }
 
       // Auto-create brand if new
       if (newBrand.trim() !== '') {
@@ -526,6 +554,36 @@ function bindCardActions() {
     });
   });
 
+  // Toggle status interactive button (Active/Hidden)
+  container.querySelectorAll('.toggle-status-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const id = btn.getAttribute('data-id');
+      const product = allProducts.find(p => String(p.id) === String(id));
+      if (!product) return;
+
+      btn.disabled = true;
+      const originalText = btn.textContent;
+      btn.textContent = '...';
+
+      try {
+        const nextStatus = product.status === 'active' ? 'hidden' : 'active';
+        product.status = nextStatus;
+        await localDb.saveProduct(product);
+
+        // Optimistic UI updates
+        btn.className = `status-badge status-badge--${nextStatus} toggle-status-btn`;
+        btn.textContent = nextStatus === 'active' ? 'Activo' : 'Oculto';
+      } catch (err) {
+        console.error('Error toggling product status:', err);
+        btn.textContent = originalText;
+        alert('Hubo un error al cambiar el estado de disponibilidad del producto.');
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  });
+
   // Delete
   container.querySelectorAll('.action-delete').forEach(btn => {
     btn.addEventListener('click', async (e) => {
@@ -555,8 +613,56 @@ function bindCardActions() {
         }
         if (product.category) {
           const catSelect = document.getElementById('edit-product-category');
-          const exists = Array.from(catSelect.options).some(opt => opt.value === product.category);
+          let exists = false;
+          for (let i = 0; i < catSelect.options.length; i++) {
+            if (catSelect.options[i].value === product.category) {
+              exists = true;
+              break;
+            }
+          }
           if (exists) catSelect.value = product.category;
+        }
+
+        // Populate Image Preview
+        editSelectedImage = product.image || '';
+        const imgPreview = document.getElementById('edit-image-preview');
+        if (imgPreview) {
+          if (editSelectedImage.startsWith('<img')) {
+            imgPreview.innerHTML = editSelectedImage.replace(/style="[^"]*"/g, 'style="width:100%; height:100%; object-fit:cover;"');
+          } else if (editSelectedImage.length > 10) {
+            imgPreview.innerHTML = `<img src="${editSelectedImage}" style="width:100%; height:100%; object-fit:cover;" />`;
+          } else {
+            imgPreview.innerHTML = `<div style="font-size:24px;">${editSelectedImage || '📦'}</div>`;
+          }
+        }
+
+        // Wire change image events
+        const btnChangeImage = document.getElementById('btn-change-edit-image');
+        const fileInput = document.getElementById('edit-image-input');
+        if (btnChangeImage && fileInput) {
+          btnChangeImage.onclick = () => fileInput.click();
+          fileInput.onchange = async (evt) => {
+            const file = evt.target.files[0];
+            if (!file) return;
+
+            try {
+              btnChangeImage.textContent = 'Comprimiendo...';
+              btnChangeImage.disabled = true;
+
+              const compressed = await compressImage(file);
+              editSelectedImage = compressed;
+
+              if (imgPreview) {
+                imgPreview.innerHTML = `<img src="${compressed}" style="width:100%; height:100%; object-fit:cover;" />`;
+              }
+            } catch (err) {
+              console.error(err);
+              alert('Error al procesar la imagen');
+            } finally {
+              btnChangeImage.textContent = 'Cambiar Imagen';
+              btnChangeImage.disabled = false;
+            }
+          };
         }
 
         // Reset and populate size picker with existing sizes
@@ -585,9 +691,8 @@ function bindCardActions() {
 
 function renderProductCard(product) {
   const statusLabels = {
-    'in-stock': 'En stock',
-    'low-stock': 'Stock bajo',
-    'out-of-stock': 'Agotado',
+    'active': 'Activo',
+    'hidden': 'Oculto',
     'draft': 'Borrador'
   };
 
@@ -598,7 +703,7 @@ function renderProductCard(product) {
       <div class="product-card__image-wrap product-image-zoom" data-image="${encodeURIComponent(product.image)}" style="cursor: zoom-in;">
         ${product.image.length < 10 ? `<div style="font-size:40px; display:flex; align-items:center; justify-content:center; height:100%;">${product.image}</div>` : product.image}
         <div class="product-card__badge-pos">
-          <span class="status-badge status-badge--${product.status}">${statusLabel}</span>
+          <button class="status-badge status-badge--${product.status} toggle-status-btn" data-id="${product.id}" style="cursor:pointer; border:none; font-family:inherit; transition: all 0.2s;" title="Clic para alternar disponibilidad">${statusLabel}</button>
         </div>
       </div>
       
@@ -643,6 +748,14 @@ function renderProductCardCompact(product) {
     ? product.image.replace(/style="[^"]*"/g, 'style="width:100%;height:100%;object-fit:cover;"')
     : `<div style="font-size:24px; display:flex; align-items:center; justify-content:center; width:100%; height:100%;">${product.image || '📦'}</div>`;
 
+  const statusLabels = {
+    'active': 'Activo',
+    'hidden': 'Oculto',
+    'draft': 'Borrador'
+  };
+
+  const statusLabel = statusLabels[product.status] || product.status;
+
   return `
     <div class="product-card product-card--compact animate-fade-in-up">
       <div class="product-card-compact__image product-image-zoom" data-image="${encodeURIComponent(product.image || '')}" style="cursor: zoom-in;">
@@ -653,17 +766,22 @@ function renderProductCardCompact(product) {
         <div style="font-weight:600; font-size:13px; color:var(--color-text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:160px;">${product.name}</div>
         <div style="font-size:14px; font-weight:700; color:var(--color-accent);">${formatCurrency(product.price)}</div>
       </div>
-      <div class="action-menu" style="margin-left:auto; flex-shrink:0;">
-        <button class="btn btn--icon action-menu-toggle" aria-label="Opciones de ${product.name}">
-          ${icon('settings', 14)}
-        </button>
-        <div class="action-menu__dropdown">
-          <button class="action-menu__item action-edit" data-id="${product.id}">
-            ${icon('edit', 14)} Editar
+      
+      <div style="margin-left:auto; display:flex; align-items:center; gap:12px; flex-shrink:0;">
+        <button class="status-badge status-badge--${product.status} toggle-status-btn" data-id="${product.id}" style="cursor:pointer; border:none; font-family:inherit; transition: all 0.2s;" title="Clic para alternar disponibilidad">${statusLabel}</button>
+        
+        <div class="action-menu">
+          <button class="btn btn--icon action-menu-toggle" aria-label="Opciones de ${product.name}">
+            ${icon('settings', 14)}
           </button>
-          <button class="action-menu__item action-menu__item--danger action-delete" data-id="${product.id}">
-            ${icon('trash-2', 14)} Eliminar
-          </button>
+          <div class="action-menu__dropdown">
+            <button class="action-menu__item action-edit" data-id="${product.id}">
+              ${icon('edit', 14)} Editar
+            </button>
+            <button class="action-menu__item action-menu__item--danger action-delete" data-id="${product.id}">
+              ${icon('trash-2', 14)} Eliminar
+            </button>
+          </div>
         </div>
       </div>
     </div>
